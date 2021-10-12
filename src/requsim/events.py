@@ -2,7 +2,7 @@ import sys
 import abc
 from abc import abstractmethod
 from .libs import matrix as mat
-from .libs.aux_functions import dejmps_protocol
+from .libs.epp import dejmps_protocol
 import numpy as np
 import requsim.quantum_objects as quantum_objects
 from collections import defaultdict
