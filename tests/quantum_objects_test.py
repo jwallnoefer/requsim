@@ -46,6 +46,8 @@ class TestQuantumObjects(unittest.TestCase):
         self.assertIsInstance(quantum_object, WorldObject)
         # assert that quantum object is registered
         self.assertIn(quantum_object, self.world.world_objects[quantum_object.type])
+        # or do the same thing in the new syntax way
+        self.assertIn(quantum_object, self.world)
         # assert that object is in test world and has correct event queue
         self.assertIs(quantum_object.world, self.world)
         self.assertIs(quantum_object.event_queue, self.world.event_queue)

@@ -13,17 +13,16 @@ class World(object):
     ----------
     event_queue : EventQueue
         A schedule of events so they can be resolved in order.
-    world_objects : dict of str: WorldObject
-        keys: str of WorldObject subclass names (obtained via x.__class__.__name__)
-        values: list of WorldObjects
+    world_objects : dict
+        keys: str of world object type
+        values: list of WorldObjects with this type
 
     """
 
     def __init__(self):
         self.event_queue = EventQueue()
-        self.world_objects = (
-            {}
-        )  # should contain everything about the state world that the protocol needs to know
+        # world_objects collects everything about the current state of the world
+        self.world_objects = {}
         self._label_counters = defaultdict(lambda: 0)
 
     def __contains__(self, world_object):
