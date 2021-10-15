@@ -1,6 +1,5 @@
 import sys
 import abc
-from abc import abstractmethod
 from .libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
 
 if sys.version_info >= (3, 4):
@@ -36,9 +35,8 @@ class NoiseChannel(object):
     def __call__(self, rho, *args, **kwargs):
         return self._channel_func(rho, *args, **kwargs)
 
-    def apply_to(
-        self, rho, qubit_indices, *args, **kwargs
-    ):  # additional functionality e.g. for different ways to define channels may be added here
+    def apply_to(self, rho, qubit_indices, *args, **kwargs):
+        # additional functionality e.g. for different ways to define channels may be added here
         """Apply the noise channel to specified qubits of a state `rho`.
 
         Parameters
