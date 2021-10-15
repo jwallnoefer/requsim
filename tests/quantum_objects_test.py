@@ -13,7 +13,8 @@ from requsim.events import SourceEvent, EntanglementSwappingEvent
 import numpy as np
 import requsim.libs.matrix as mat
 from requsim.noise import NoiseChannel, NoiseModel
-from requsim.libs.aux_functions import w_noise_channel, apply_single_qubit_map
+from requsim.libs.aux_functions import apply_single_qubit_map
+from requsim.tools.noise_channels import w_noise_channel
 
 example_noise_channel = NoiseChannel(
     n_qubits=1, channel_function=lambda rho: w_noise_channel(rho=rho, alpha=0.99)

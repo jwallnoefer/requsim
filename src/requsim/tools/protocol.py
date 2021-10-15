@@ -3,7 +3,7 @@ import abc
 from abc import abstractmethod
 import numpy as np
 import pandas as pd
-from events import SourceEvent
+from ..events import SourceEvent
 from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
 from libs.aux_functions import distance
 

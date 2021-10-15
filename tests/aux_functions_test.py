@@ -1,11 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 import numpy as np
-from requsim.libs.aux_functions import (
-    apply_single_qubit_map,
-    w_noise_channel,
-    apply_m_qubit_map,
-)
+from requsim.libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
+from requsim.tools.noise_channels import w_noise_channel
 import requsim.libs.matrix as mat
 
 
@@ -30,9 +27,8 @@ def _two_qubit_local_wnoise(rho, p):
 def _random_test_state(n):
     test_state = np.random.random((2 ** n, 2 ** n))
     test_state = test_state + test_state.T  # symmetrize
-    test_state = test_state / np.trace(
-        test_state
-    )  # normalize, now we have random real density matrix
+    # normalize, so we have random real density matrix
+    test_state = test_state / np.trace(test_state)
     return test_state
 
 
