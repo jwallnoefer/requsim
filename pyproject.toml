@@ -1,3 +1,26 @@
+[project]
+name = "requsim"
+requires-python = ">=3.8.10"
+dependencies = [
+  "numpy>=1.21.2",
+  "pandas>=1.3.3"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=6.2.5"
+]
+docs = [
+  "sphinx",
+  "autodocsumm",
+  "recommonmark",
+  "sphinx-rtd-theme"
+]
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["setuptools>=57", "wheel", "setuptools_scm>=6.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/requsim/version.py"
+local_scheme = "no-local-version"
