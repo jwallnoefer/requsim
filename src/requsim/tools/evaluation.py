@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from . import matrix as mat
+from ..libs import matrix as mat
 import pandas as pd
 from warnings import warn
 

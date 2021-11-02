@@ -4,8 +4,9 @@ from abc import abstractmethod
 import numpy as np
 import pandas as pd
 from ..events import SourceEvent
-from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
-from libs.aux_functions import distance
+from ..libs.aux_functions import distance
+
+C = 2e8  # speed of light in optical fiber
 
 if sys.version_info >= (3, 4):
     ABC = abc.ABC
