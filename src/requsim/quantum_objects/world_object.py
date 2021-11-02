@@ -1,10 +1,5 @@
 import sys
-import abc
-
-if sys.version_info >= (3, 4):
-    ABC = abc.ABC
-else:
-    ABC = abc.ABCMeta("ABC", (), {})
+from abc import ABC
 
 
 class WorldObject(ABC):

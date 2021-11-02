@@ -1,11 +1,5 @@
 import sys
-import abc
 from .libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
-
-if sys.version_info >= (3, 4):
-    ABC = abc.ABC
-else:
-    ABC = abc.ABCMeta("ABC", (), {})
 
 
 class NoiseChannel(object):
