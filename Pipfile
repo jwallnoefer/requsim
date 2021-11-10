@@ -13,6 +13,10 @@ pytest = "*"
 setuptools = "*"
 wheel = "*"
 requsim = {editable = true, path = "."}
+sphinx = "*"
+autodocsumm = "*"
+recommonmark = "*"
+sphinx-rtd-theme = "*"
 
 [requires]
 python_version = "3.8"

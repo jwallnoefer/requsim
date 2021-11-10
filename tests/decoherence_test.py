@@ -8,7 +8,7 @@ in its own file.
 import unittest
 from requsim.world import World
 from requsim.quantum_objects import Pair, Station
-from requsim.libs.aux_functions import x_noise_channel, z_noise_channel
+from requsim.tools.noise_channels import x_noise_channel, z_noise_channel
 import requsim.libs.matrix as mat
 import numpy as np
 

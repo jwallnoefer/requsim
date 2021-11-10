@@ -1,16 +1,11 @@
 import sys
-import abc
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from events import SourceEvent
-from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
-from libs.aux_functions import distance
+from ..events import SourceEvent
+from ..libs.aux_functions import distance
 
-if sys.version_info >= (3, 4):
-    ABC = abc.ABC
-else:
-    ABC = abc.ABCMeta("ABC", (), {})
+C = 2e8  # speed of light in optical fiber
 
 
 class Protocol(ABC):
