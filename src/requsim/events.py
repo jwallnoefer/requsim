@@ -58,6 +58,7 @@ class Event(ABC):
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
         self._return_dict = {"event_type": self.type, "resolve_successful": True}
+        self._callback_functions = []
 
     @abstractmethod
     def __repr__(self):
@@ -130,7 +131,29 @@ class Event(ABC):
         else:
             self._return_dict.update({"resolve_successful": False})
         self._deregister_from_objects()
+        # callbacks after resolving
+        for callback_func in self._callback_functions:
+            callback_func(self._return_dict)
         return self._return_dict
+
+    def add_callback(self, callback_func):
+        """Add a callback to this event.
+
+        Multiple callbacks added this way will resolve in the order they were
+        added.
+
+        Parameters
+        ----------
+        callback_func : callable
+            This function will be called with the `_return_dict` as an argument
+            after the event is resolved.
+
+        Returns
+        -------
+        None
+
+        """
+        self._callback_functions += [callback_func]
 
 
 class GenericEvent(Event):
