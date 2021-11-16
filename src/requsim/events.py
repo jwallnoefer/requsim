@@ -280,10 +280,10 @@ class SourceEvent(Event):
         None
 
         """
-        # print("A source event happened at time", self.time, "while queue looked like this:", self.event_queue.queue)
-        self.source.generate_pair(
+        new_pair = self.source.generate_pair(
             self.initial_state, *self.generation_args, **self.generation_kwargs
         )
+        return {"source": self.source, "output_pair": new_pair}
 
 
 class EntanglementSwappingEvent(Event):
@@ -406,6 +406,7 @@ class EntanglementSwappingEvent(Event):
         right_pair.qubits[0].destroy()
         left_pair.destroy()
         right_pair.destroy()
+        return {"output_pair": new_pair}
 
 
 class DiscardQubitEvent(Event):
@@ -461,7 +462,7 @@ class DiscardQubitEvent(Event):
             self.qubit.pair.qubits[1].destroy()
         else:
             self.qubit.destroy()
-            # print("A Discard Event happened with eventqueue:", self.qubit.world.event_queue.queue)
+        return {}
 
 
 class EntanglementPurificationEvent(Event):
