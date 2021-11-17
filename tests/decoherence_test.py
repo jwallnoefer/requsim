@@ -8,6 +8,7 @@ in its own file.
 import unittest
 from requsim.world import World
 from requsim.quantum_objects import Pair, Station
+from requsim.noise import NoiseChannel
 from requsim.tools.noise_channels import x_noise_channel, z_noise_channel
 import requsim.libs.matrix as mat
 import numpy as np
@@ -40,12 +41,13 @@ class TestDecoherence(unittest.TestCase):
 
     def test_single_station_noisy(self):
         dephasing_time = 50
-        error_channel = _time_based_channel(
+        error_func = _time_based_channel(
             epsilon_channel=x_noise_channel, dephasing_time=dephasing_time
         )
+        error_channel = NoiseChannel(n_qubits=1, channel_function=error_func)
         stations = [
-            Station(world=self.world, id=0, position=0, memory_noise=None),
-            Station(world=self.world, id=1, position=200, memory_noise=error_channel),
+            Station(world=self.world, position=0, memory_noise=None),
+            Station(world=self.world, position=200, memory_noise=error_channel),
         ]
         qubits = [station.create_qubit() for station in stations]
         random_state = np.random.rand(4, 4)
@@ -80,15 +82,17 @@ class TestDecoherence(unittest.TestCase):
 
     def test_both_stations_noisy(self):
         dephasing_time = 50
-        error_channel1 = _time_based_channel(
+        error_func1 = _time_based_channel(
             epsilon_channel=z_noise_channel, dephasing_time=dephasing_time
         )
-        error_channel2 = _time_based_channel(
+        error_channel1 = NoiseChannel(n_qubits=1, channel_function=error_func1)
+        error_func2 = _time_based_channel(
             epsilon_channel=x_noise_channel, dephasing_time=dephasing_time
         )
+        error_channel2 = NoiseChannel(n_qubits=1, channel_function=error_func2)
         stations = [
-            Station(world=self.world, id=0, position=0, memory_noise=error_channel1),
-            Station(world=self.world, id=1, position=200, memory_noise=error_channel2),
+            Station(world=self.world, position=0, memory_noise=error_channel1),
+            Station(world=self.world, position=200, memory_noise=error_channel2),
         ]
         qubits = [station.create_qubit() for station in stations]
         random_state = np.random.rand(4, 4)
