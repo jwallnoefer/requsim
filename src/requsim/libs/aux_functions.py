@@ -31,7 +31,7 @@ def distance(pos1, pos2):
         if pos1.shape == pos2.shape:
             return np.sqrt(np.sum((pos1 - pos2) ** 2))
         else:
-            ValueError(
+            raise ValueError(
                 f"Can't calculate distance between positions with shape {pos1.shape} and {pos2.shape}"
             )
     else:
