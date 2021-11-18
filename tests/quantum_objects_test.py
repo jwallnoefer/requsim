@@ -203,7 +203,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_c.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_c = EntanglementSwappingEvent(time=0, pairs=[pair_1c, pair_2c])
+        event_c = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1c, pair_2c], station=station_c
+        )
         self.world.event_queue.add_event(event_c)
         self.world.event_queue.resolve_next_event()
         pair_c = self.world.world_objects["Pair"][2]
@@ -223,7 +225,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_d.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_d = EntanglementSwappingEvent(time=0, pairs=[pair_1d, pair_2d])
+        event_d = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1d, pair_2d], station=station_d
+        )
         self.world.event_queue.add_event(event_d)
         self.world.event_queue.resolve_next_event()
         pair_d = self.world.world_objects["Pair"][3]

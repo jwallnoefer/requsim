@@ -448,7 +448,13 @@ class DiscardQubitEvent(Event):
         None
 
         """
-        self.qubit.destroy()
+        qubit_pair = self.qubit._info["pair"]
+        if qubit_pair is not None:
+            qubit_pair.qubit1.destroy()
+            qubit_pair.qubit2.destroy()
+            qubit_pair.destroy()
+        else:
+            self.qubit.destroy()
         return {}
 
 
@@ -461,15 +467,13 @@ class EntanglementPurificationEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The pairs involved in the entanglement purification protocol.
+    communication_speed : scalar
+        speed at which the classical information travels
     protocol : {"dejmps"} or callable
         Can be one of the pre-installed or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
-    communication_speed : scalar
-        speed at which the classical information travels
-        Default: 2*10^8 (speed of light in optical fibre)
-
 
     Attributes
     ----------
@@ -479,7 +483,7 @@ class EntanglementPurificationEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, protocol="dejmps", communication_speed=2e8):
+    def __init__(self, time, pairs, communication_time, protocol="dejmps"):
         self.pairs = pairs
         if protocol == "dejmps":
             self.protocol = dejmps_protocol
@@ -490,7 +494,7 @@ class EntanglementPurificationEvent(Event):
                 "EntanglementPurificationEvent got a protocol type that is not supported: "
                 + repr(protocol)
             )
-        self.communication_speed = communication_speed
+        self.communication_time = communication_time
         super(EntanglementPurificationEvent, self).__init__(
             time=time,
             required_objects=self.pairs
@@ -532,16 +536,9 @@ class EntanglementPurificationEvent(Event):
             pair.qubits[0].destroy()
             pair.qubits[1].destroy()
             pair.destroy()
-        communication_time = (
-            np.abs(
-                output_pair.qubit2.station.position
-                - output_pair.qubit1.station.position
-            )
-            / self.communication_speed
-        )
         if np.random.random() <= p_suc:  # if successful
             unblock_event = UnblockEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 quantum_objects=[output_pair, output_pair.qubit1, output_pair.qubit2],
             )
             self.event_queue.add_event(unblock_event)
@@ -549,12 +546,12 @@ class EntanglementPurificationEvent(Event):
         else:  # if unsuccessful
 
             def destroy_function():
-                output_pair.destroy_and_track_resources()
+                output_pair.destroy()
                 output_pair.qubits[0].destroy()
                 output_pair.qubits[1].destroy()
 
             destroy_event = GenericEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 resolve_function=destroy_function,
                 required_objects=[output_pair],
                 priority=0,

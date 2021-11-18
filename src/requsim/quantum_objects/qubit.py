@@ -27,8 +27,8 @@ class Qubit(WorldObject):
     """
 
     # station should also know about which qubits are at its location
-    def __init__(self, world, unresolved_noises=None, info={}, label=None):
-        self._unresolved_noises = []
+    def __init__(self, world, unresolved_noises=[], info={}, label=None):
+        self._unresolved_noises = unresolved_noises
         self._info = defaultdict(lambda: None)
         self._info.update(info)
         self._noise_handlers = []
@@ -37,12 +37,16 @@ class Qubit(WorldObject):
 
     def __repr__(self):
         return self.__class__.__name__ + (
-            f"(world={self.world}, unresolved_noise={self._unresolved_noises}, "
+            f"(world={self.world}, unresolved_noises={self._unresolved_noises}, "
             f"info={self._info}, label={self.label})"
         )
 
     def __str__(self):
-        return f"{self.label} at station {self.station.label if self.station else self.station}, part of pair {self.pair.label if self.pair else self.pair}."
+        return (
+            f"{self.label} at station"
+            f"{self._info['station'].label if self._info['station'] else self._info['station']}, "
+            f"part of pair {self._info['pair'].label if self._info['pair'] else self._info['pair']}."
+        )
 
     @property
     def type(self):

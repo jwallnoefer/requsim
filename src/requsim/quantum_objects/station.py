@@ -103,9 +103,12 @@ class Station(WorldObject):
             The created Qubit object.
 
         """
-        new_qubit = Qubit(
-            world=self.world, unresolved_noises=[self.creation_noise_channel]
-        )
+        if self.creation_noise_channel is not None:
+            new_qubit = Qubit(
+                world=self.world, unresolved_noises=[self.creation_noise_channel]
+            )
+        else:
+            new_qubit = Qubit(world=self.world)
         self.register_qubit(new_qubit)
         if self.memory_cutoff_time is not None:
             discard_event = events.DiscardQubitEvent(

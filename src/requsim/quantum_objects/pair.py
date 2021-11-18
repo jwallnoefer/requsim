@@ -135,6 +135,10 @@ class Pair(WorldObject):
 
     def destroy(self):
         # remove self as noise handler for its qubits
-        self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
-        self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
+        if self.qubit1 in self.world:
+            self.qubit1.update_info({"pair": None})
+            self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
+        if self.qubit2 in self.world:
+            self.qubit2.update_info({"pair": None})
+            self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
         super(Pair, self).destroy()
