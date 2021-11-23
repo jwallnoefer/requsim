@@ -94,7 +94,7 @@ class Station(WorldObject):
         if self.memory_noise is not None:
             qubit.add_time_dependent_noise(self.memory_noise)
 
-    def create_qubit(self):
+    def create_qubit(self, label=None):
         """Create a new qubit at this station.
 
         Returns
@@ -105,10 +105,12 @@ class Station(WorldObject):
         """
         if self.creation_noise_channel is not None:
             new_qubit = Qubit(
-                world=self.world, unresolved_noises=[self.creation_noise_channel]
+                world=self.world,
+                unresolved_noises=[self.creation_noise_channel],
+                label=label,
             )
         else:
-            new_qubit = Qubit(world=self.world)
+            new_qubit = Qubit(world=self.world, label=label)
         self.register_qubit(new_qubit)
         if self.memory_cutoff_time is not None:
             discard_event = events.DiscardQubitEvent(
