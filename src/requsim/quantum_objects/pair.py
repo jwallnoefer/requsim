@@ -119,11 +119,15 @@ class Pair(WorldObject):
         self.state = noise_channel.apply_to(
             rho=self.state, qubit_indices=[0], *args, **kwargs
         )
+        handling_successful = True
+        return handling_successful
 
     def _qubit2_noise_handler(self, noise_channel, *args, **kwargs):
         self.state = noise_channel.apply_to(
             rho=self.state, qubit_indices=[1], *args, **kwargs
         )
+        handling_successful = True
+        return handling_successful
 
     def _on_qubit_destroy(self, qubit):
         if qubit in self.qubits:

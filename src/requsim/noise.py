@@ -83,3 +83,37 @@ class NoiseModel(object):
         self.channel_before = channel_before
         self.map_replace = map_replace
         self.channel_after = channel_after
+
+
+def freeze_noise_channel(noise_channel, *args, **kwargs):
+    """Turn NoiseChannel with variable arguments into a static noise channel.
+
+    This is useful when the application of the channel is delayed, so the
+    args and kwargs do not need to be stored separately until that happens.
+
+    Parameters
+    ----------
+    noise_channel : NoiseChannel
+        Description of parameter `noise_channel`.
+    *args : type
+        Description of parameter `*args`.
+    **kwargs : type
+        Description of parameter `**kwargs`.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
+    args_to_freeze = args
+    kwargs_to_freeze = kwargs
+
+    def new_channel_func(rho):
+        # this works because each NoiseChannel is also a callable map
+        # that acts on a state of appropriate dimensions
+        return noise_channel(rho, *args_to_freeze, **kwargs_to_freeze)
+
+    return NoiseChannel(
+        n_qubits=noise_channel.n_qubits, channel_function=new_channel_func
+    )
