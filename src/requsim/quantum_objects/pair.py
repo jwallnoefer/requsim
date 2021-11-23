@@ -68,7 +68,12 @@ class Pair(WorldObject):
             + ", ".join([x.label for x in self.qubits])
             + " between stations "
             + ", ".join(
-                [x.station.label if x.station else str(x.station) for x in self.qubits]
+                [
+                    x._info["Station"].label
+                    if x._info["Station"]
+                    else str(x._info["Station"])
+                    for x in self.qubits
+                ]
             )
             + "."
         )

@@ -58,6 +58,9 @@ class TestQuantumObjects(unittest.TestCase):
         self.assertEqual(
             quantum_object.last_updated, self.world.event_queue.current_time
         )
+        # see if str or repr throw any errors
+        str(quantum_object)
+        repr(quantum_object)
 
     def test_qubit(self):
         qubit = Qubit(world=self.world)

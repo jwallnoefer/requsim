@@ -43,7 +43,7 @@ class Qubit(WorldObject):
 
     def __str__(self):
         return (
-            f"{self.label} at station"
+            f"{self.label} at station "
             f"{self._info['station'].label if self._info['station'] else self._info['station']}, "
             f"part of pair {self._info['pair'].label if self._info['pair'] else self._info['pair']}."
         )
