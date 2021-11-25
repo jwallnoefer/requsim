@@ -448,10 +448,10 @@ class DiscardQubitEvent(Event):
         None
 
         """
-        qubit_pair = self.qubit._info["pair"]
+        qubit_pair = self.qubit.higher_order_object
         if qubit_pair is not None:
-            qubit_pair.qubit1.destroy()
-            qubit_pair.qubit2.destroy()
+            for qubit in qubit_pair.qubits:
+                qubit.destroy()
             qubit_pair.destroy()
         else:
             self.qubit.destroy()

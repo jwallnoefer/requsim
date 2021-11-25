@@ -54,8 +54,10 @@ class Pair(WorldObject):
         self.qubits = qubits
         self.state = initial_state
         self.qubit1.update_info({"pair": self})
+        self.qubit1.higher_order_object = self
         self.qubit1.add_destroy_callback(self._on_qubit_destroy)
         self.qubit2.update_info({"pair": self})
+        self.qubit2.higher_order_object = self
         self.qubit2.add_destroy_callback(self._on_qubit_destroy)
         # add self as noise handler for its qubits
         self.qubit1.add_noise_handler(self._qubit1_noise_handler)
@@ -145,9 +147,7 @@ class Pair(WorldObject):
     def destroy(self):
         # remove self as noise handler for its qubits
         if self.qubit1 in self.world:
-            self.qubit1.update_info({"pair": None})
             self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
         if self.qubit2 in self.world:
-            self.qubit2.update_info({"pair": None})
             self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
         super(Pair, self).destroy()
