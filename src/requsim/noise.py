@@ -1,5 +1,6 @@
-import sys
 from .libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
+from dataclasses import dataclass
+from typing import Union
 
 
 class NoiseChannel(object):
@@ -58,6 +59,7 @@ class NoiseChannel(object):
             )
 
 
+@dataclass
 class NoiseModel(object):
     """Class for describing noise in a standardized way.
 
@@ -79,10 +81,9 @@ class NoiseModel(object):
 
     """
 
-    def __init__(self, channel_before=None, map_replace=None, channel_after=None):
-        self.channel_before = channel_before
-        self.map_replace = map_replace
-        self.channel_after = channel_after
+    channel_before: Union[NoiseChannel, None] = None
+    map_replace: Union[callable, None] = None
+    channel_after: Union[NoiseChannel, None] = None
 
 
 def freeze_noise_channel(noise_channel, *args, **kwargs):
