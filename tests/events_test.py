@@ -86,6 +86,16 @@ class TestEvents(unittest.TestCase):
         for obj in test_objects:
             self.assertNotIn(event, obj.required_by_events)
 
+    def test_callback(self):
+        # tests callback with dummy event, but could be useful to do this for all events
+        test_objects = [DummyObject(world=self.world) for i in range(20)]
+        event = DummyEvent(time=0, required_objects=test_objects)
+        self._aux_general_test(event)
+        mock_callback = MagicMock()
+        event.add_callback(mock_callback)
+        event.resolve()
+        mock_callback.assert_called_once()
+
     def test_source_event(self):
         test_station = Station(world=self.world, position=0)
         test_source = Source(

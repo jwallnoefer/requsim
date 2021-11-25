@@ -58,6 +58,7 @@ class Event(ABC):
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
         self._return_dict = {"event_type": self.type, "resolve_successful": True}
+        self._callback_functions = []
 
     @abstractmethod
     def __repr__(self):
@@ -130,7 +131,29 @@ class Event(ABC):
         else:
             self._return_dict.update({"resolve_successful": False})
         self._deregister_from_objects()
+        # callbacks after resolving
+        for callback_func in self._callback_functions:
+            callback_func(self._return_dict)
         return self._return_dict
+
+    def add_callback(self, callback_func):
+        """Add a callback to this event.
+
+        Multiple callbacks added this way will resolve in the order they were
+        added.
+
+        Parameters
+        ----------
+        callback_func : callable
+            This function will be called with the `_return_dict` as an argument
+            after the event is resolved.
+
+        Returns
+        -------
+        None
+
+        """
+        self._callback_functions += [callback_func]
 
 
 class GenericEvent(Event):
@@ -178,12 +201,9 @@ class GenericEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time="
-            + str(self.time)
-            + ", resolve_function="
-            + str(self._resolve_function)
-            + ", "
+            + f"(time={self.time}, resolve_function={self._resolve_function},"
             + ", ".join(map(str, self._resolve_function_args))
+            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked},"
             + ", ".join(
                 [
                     "{}={}".format(str(k), str(v))
@@ -235,9 +255,15 @@ class SourceEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time={}, source={}, initial_state={})".format(
-                str(self.time), str(self.source), repr(self.initial_state)
+            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state},"
+            + ", ".join(map(str, self.generation_args))
+            + ", ".join(
+                [
+                    "{}={}".format(str(k), str(v))
+                    for k, v in self.generation_kwargs.items()
+                ]
             )
+            + ")"
         )
 
     def __str__(self):
@@ -257,10 +283,10 @@ class SourceEvent(Event):
         None
 
         """
-        # print("A source event happened at time", self.time, "while queue looked like this:", self.event_queue.queue)
-        self.source.generate_pair(
+        new_pair = self.source.generate_pair(
             self.initial_state, *self.generation_args, **self.generation_kwargs
         )
+        return {"source": self.source, "output_pair": new_pair}
 
 
 class EntanglementSwappingEvent(Event):
@@ -272,20 +298,15 @@ class EntanglementSwappingEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The left pair and the right pair.
-    error_func : callable or None [Deprecated, use station.BSM_noise_model instead.]
-        A four-qubit map. Careful: This overwrites any noise behavior set by
-        station. Default: None
 
     Attributes
     ----------
     pairs
-    error_func
 
     """
 
-    def __init__(self, time, pairs, error_func=None):
+    def __init__(self, time, pairs):
         self.pairs = pairs
-        self.error_func = error_func  # currently a four-qubit channel, would be nicer as two-qubit channel that gets applied to the right qubits
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
@@ -293,9 +314,7 @@ class EntanglementSwappingEvent(Event):
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, pairs={}, error_func={})".format(
-            str(self.time), str(self.pairs), repr(self.error_func)
-        )
+        return self.__class__.__name__ + f"(time={self.time}, pairs={self.pairs})"
 
     def __str__(self):
         return (
@@ -325,9 +344,7 @@ class EntanglementSwappingEvent(Event):
         right_pair.update_time()
         four_qubit_state = mat.tensor(left_pair.state, right_pair.state)
         # non-ideal-bell-measurement
-        if self.error_func is not None:
-            four_qubit_state = self.error_func(four_qubit_state)
-        elif swapping_station.BSM_noise_model.channel_before is not None:
+        if swapping_station.BSM_noise_model.channel_before is not None:
             noise_channel = swapping_station.BSM_noise_model.channel_before
             if noise_channel.n_qubits == 4:
                 four_qubit_state = noise_channel(four_qubit_state)
@@ -383,6 +400,7 @@ class EntanglementSwappingEvent(Event):
         right_pair.qubits[0].destroy()
         left_pair.destroy()
         right_pair.destroy()
+        return {"output_pair": new_pair}
 
 
 class DiscardQubitEvent(Event):
@@ -417,8 +435,9 @@ class DiscardQubitEvent(Event):
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, qubit={})".format(
-            str(self.time), str(self.qubit)
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked})"
         )
 
     def __str__(self):
@@ -438,7 +457,7 @@ class DiscardQubitEvent(Event):
             self.qubit.pair.qubits[1].destroy()
         else:
             self.qubit.destroy()
-            # print("A Discard Event happened with eventqueue:", self.qubit.world.event_queue.queue)
+        return {}
 
 
 class EntanglementPurificationEvent(Event):
@@ -487,8 +506,9 @@ class EntanglementPurificationEvent(Event):
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, pairs={}, protocol={})".format(
-            repr(self.time), repr(self.pairs), repr(self.protocol)
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, communication_speed={self.communication_speed})"
         )
 
     def __str__(self):
@@ -594,9 +614,7 @@ class UnblockEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time={}, quantum_objects={}, priority={})".format(
-                repr(self.time), repr(self.quantum_objects), repr(self.priority)
-            )
+            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority})"
         )
 
     def __str__(self):
