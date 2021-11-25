@@ -298,20 +298,15 @@ class EntanglementSwappingEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The left pair and the right pair.
-    error_func : callable or None [Deprecated, use station.BSM_noise_model instead.]
-        A four-qubit map. Careful: This overwrites any noise behavior set by
-        station. Default: None
 
     Attributes
     ----------
     pairs
-    error_func
 
     """
 
-    def __init__(self, time, pairs, error_func=None):
+    def __init__(self, time, pairs):
         self.pairs = pairs
-        self.error_func = error_func  # currently a four-qubit channel, would be nicer as two-qubit channel that gets applied to the right qubits
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
@@ -319,10 +314,7 @@ class EntanglementSwappingEvent(Event):
         )
 
     def __repr__(self):
-        return (
-            self.__class__.__name__
-            + f"(time={self.time}, pairs={self.pairs}, error_func={self.error_func})"
-        )
+        return self.__class__.__name__ + f"(time={self.time}, pairs={self.pairs})"
 
     def __str__(self):
         return (
@@ -352,9 +344,7 @@ class EntanglementSwappingEvent(Event):
         right_pair.update_time()
         four_qubit_state = mat.tensor(left_pair.state, right_pair.state)
         # non-ideal-bell-measurement
-        if self.error_func is not None:
-            four_qubit_state = self.error_func(four_qubit_state)
-        elif swapping_station.BSM_noise_model.channel_before is not None:
+        if swapping_station.BSM_noise_model.channel_before is not None:
             noise_channel = swapping_station.BSM_noise_model.channel_before
             if noise_channel.n_qubits == 4:
                 four_qubit_state = noise_channel(four_qubit_state)
