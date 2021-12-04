@@ -194,7 +194,7 @@ class TwoLinkProtocol(Protocol):
                 distance(self.station_B, self.station_central),
             ]
         )
-        comm_time = comm_distance / C
+        comm_time = comm_distance / self.communication_speed
 
         self.time_list += [self.world.event_queue.current_time + comm_time]
         self.state_list += [long_range_pair.state]
