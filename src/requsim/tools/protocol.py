@@ -5,8 +5,6 @@ import pandas as pd
 from ..events import SourceEvent
 from ..libs.aux_functions import distance
 
-C = 2e8  # speed of light in optical fiber
-
 
 class Protocol(ABC):
     """Abstract base class for protocols.
@@ -68,23 +66,15 @@ class TwoLinkProtocol(Protocol):
     But it is still abstract and misses the central check method.
     """
 
-    def __init__(self, world):
+    def __init__(self, world, communication_speed):
         self.time_list = []
         self.state_list = []
-        self.resource_cost_max_list = []
-        self.resource_cost_add_list = []
+        self.communication_speed = communication_speed
         super(TwoLinkProtocol, self).__init__(world=world)
 
     @property
     def data(self):
-        return pd.DataFrame(
-            {
-                "time": self.time_list,
-                "state": self.state_list,
-                "resource_cost_max": self.resource_cost_max_list,
-                "resource_cost_add": self.resource_cost_add_list,
-            }
-        )
+        return pd.DataFrame({"time": self.time_list, "state": self.state_list})
 
     def setup(self):
         """Identifies the stations and sources in the world.
@@ -208,6 +198,4 @@ class TwoLinkProtocol(Protocol):
 
         self.time_list += [self.world.event_queue.current_time + comm_time]
         self.state_list += [long_range_pair.state]
-        self.resource_cost_max_list += [long_range_pair.resource_cost_max]
-        self.resource_cost_add_list += [long_range_pair.resource_cost_add]
         return
