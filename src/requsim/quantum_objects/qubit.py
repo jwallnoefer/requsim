@@ -24,6 +24,9 @@ class Qubit(WorldObject):
     ----------
     type : str
         "Qubit"
+    higher_order_object : QuantumObject or None
+        If the qubit is part of a higher level concept (e.g. a pair) this can
+        be accessed here, otherwise None.
 
     """
 
@@ -34,6 +37,7 @@ class Qubit(WorldObject):
         self._info.update(info)
         self._noise_handlers = []
         self._time_dependent_noises = []
+        self.higher_order_object = None
         super(Qubit, self).__init__(world=world, label=label)
 
     def __repr__(self):
@@ -46,7 +50,7 @@ class Qubit(WorldObject):
         return (
             f"{self.label} at station "
             f"{self._info['station'].label if self._info['station'] else self._info['station']}, "
-            f"part of pair {self._info['pair'].label if self._info['pair'] else self._info['pair']}."
+            f"part of {self.higher_order_object.label if self.higher_order_object else self.higher_order_object}."
         )
 
     @property
