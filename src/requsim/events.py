@@ -298,15 +298,19 @@ class EntanglementSwappingEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The left pair and the right pair.
+    station : Station
+        The station where the entanglement swapping is performed.
 
     Attributes
     ----------
     pairs
+    station
 
     """
 
-    def __init__(self, time, pairs):
+    def __init__(self, time, pairs, station):
         self.pairs = pairs
+        self.station = station
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
@@ -338,8 +342,9 @@ class EntanglementSwappingEvent(Event):
         # instead of relying on strict indexes of left and right pairs
         left_pair = self.pairs[0]
         right_pair = self.pairs[1]
-        assert left_pair.qubits[1].station is right_pair.qubits[0].station
-        swapping_station = left_pair.qubits[1].station
+        assert left_pair.qubits[1] in self.station.qubits
+        assert right_pair.qubits[0] in self.station.qubits
+        swapping_station = self.station
         left_pair.update_time()
         right_pair.update_time()
         four_qubit_state = mat.tensor(left_pair.state, right_pair.state)
@@ -372,28 +377,10 @@ class EntanglementSwappingEvent(Event):
             noise_channel = swapping_station.BSM_noise_model.channel_after
             assert noise_channel.n_qubits == 2
             two_qubit_state = noise_channel(two_qubit_state)
-        if (
-            left_pair.resource_cost_add is not None
-            and right_pair.resource_cost_add is not None
-        ):
-            new_cost_add = left_pair.resource_cost_add + right_pair.resource_cost_add
-        else:
-            new_cost_add = None
-        if (
-            left_pair.resource_cost_max is not None
-            and right_pair.resource_cost_max is not None
-        ):
-            new_cost_max = max(
-                left_pair.resource_cost_max, right_pair.resource_cost_max
-            )
-        else:
-            new_cost_max = None
         new_pair = quantum_objects.Pair(
             world=left_pair.world,
             qubits=[left_pair.qubits[0], right_pair.qubits[1]],
             initial_state=two_qubit_state,
-            initial_cost_add=new_cost_add,
-            initial_cost_max=new_cost_max,
         )
         # cleanup
         left_pair.qubits[1].destroy()
@@ -451,10 +438,11 @@ class DiscardQubitEvent(Event):
         None
 
         """
-        if self.qubit.pair is not None:
-            self.qubit.pair.destroy_and_track_resources()
-            self.qubit.pair.qubits[0].destroy()
-            self.qubit.pair.qubits[1].destroy()
+        qubit_pair = self.qubit.higher_order_object
+        if qubit_pair is not None:
+            for qubit in qubit_pair.qubits:
+                qubit.destroy()
+            qubit_pair.destroy()
         else:
             self.qubit.destroy()
         return {}
@@ -469,15 +457,13 @@ class EntanglementPurificationEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The pairs involved in the entanglement purification protocol.
+    communication_speed : scalar
+        speed at which the classical information travels
     protocol : {"dejmps"} or callable
         Can be one of the pre-installed or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
-    communication_speed : scalar
-        speed at which the classical information travels
-        Default: 2*10^8 (speed of light in optical fibre)
-
 
     Attributes
     ----------
@@ -487,7 +473,7 @@ class EntanglementPurificationEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, protocol="dejmps", communication_speed=2e8):
+    def __init__(self, time, pairs, communication_time, protocol="dejmps"):
         self.pairs = pairs
         if protocol == "dejmps":
             self.protocol = dejmps_protocol
@@ -498,7 +484,7 @@ class EntanglementPurificationEvent(Event):
                 "EntanglementPurificationEvent got a protocol type that is not supported: "
                 + repr(protocol)
             )
-        self.communication_speed = communication_speed
+        self.communication_time = communication_time
         super(EntanglementPurificationEvent, self).__init__(
             time=time,
             required_objects=self.pairs
@@ -533,14 +519,6 @@ class EntanglementPurificationEvent(Event):
         p_suc, state = self.protocol(rho)
         output_pair = self.pairs[0]
         output_pair.state = state
-        if output_pair.resource_cost_add is not None:
-            output_pair.resource_cost_add = np.sum(
-                [pair.resource_cost_add for pair in self.pairs]
-            )
-        if output_pair.resource_cost_max is not None:
-            output_pair.resource_cost_max = np.sum(
-                [pair.resource_cost_max for pair in self.pairs]
-            )
         output_pair.is_blocked = True
         output_pair.qubit1.is_blocked = True
         output_pair.qubit2.is_blocked = True
@@ -548,16 +526,9 @@ class EntanglementPurificationEvent(Event):
             pair.qubits[0].destroy()
             pair.qubits[1].destroy()
             pair.destroy()
-        communication_time = (
-            np.abs(
-                output_pair.qubit2.station.position
-                - output_pair.qubit1.station.position
-            )
-            / self.communication_speed
-        )
         if np.random.random() <= p_suc:  # if successful
             unblock_event = UnblockEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 quantum_objects=[output_pair, output_pair.qubit1, output_pair.qubit2],
             )
             self.event_queue.add_event(unblock_event)
@@ -565,12 +536,12 @@ class EntanglementPurificationEvent(Event):
         else:  # if unsuccessful
 
             def destroy_function():
-                output_pair.destroy_and_track_resources()
+                output_pair.destroy()
                 output_pair.qubits[0].destroy()
                 output_pair.qubits[1].destroy()
 
             destroy_event = GenericEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 resolve_function=destroy_function,
                 required_objects=[output_pair],
                 priority=0,

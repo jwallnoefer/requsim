@@ -30,8 +30,6 @@ class Station(WorldObject):
         Probability that a detector clicks without a state arriving.
         This is not used by the Station itself, but state generation functions
         may use this. Default: 0
-    id : int or None
-        [DEPRECATED: Do not use!] Label for the station. Default: None
     label : str or None
         Optionally, provide a custom label.
 
@@ -43,15 +41,14 @@ class Station(WorldObject):
         The qubits currently at this position.
     type : str
         "Station"
-    memory_noise : callable or None
-    memory_cutoff_time : callable or None
+    memory_noise : NoiseChannel or None
+    memory_cutoff_time : scalar or None
     resource_tracking : defaultdict
         Intermediate store for carrying over resources used by discarded
         pairs/qubits.
     BSM_noise_model : NoiseModel
     creation_noise_channel : NoiseChannel or None
     dark_count_probability : scalar
-    id : int or None
 
     """
 
@@ -64,15 +61,10 @@ class Station(WorldObject):
         BSM_noise_model=NoiseModel(),
         creation_noise_channel=None,
         dark_count_probability=0,
-        id=None,
         label=None,
     ):
-        self.id = id
         self.position = position
         self.qubits = []
-        self.resource_tracking = defaultdict(
-            lambda: {"resource_cost_add": 0, "resource_cost_max": 0}
-        )
         self.memory_noise = memory_noise
         self.memory_cutoff_time = memory_cutoff_time
         self.BSM_noise_model = BSM_noise_model
@@ -80,14 +72,29 @@ class Station(WorldObject):
         self.dark_count_probability = dark_count_probability
         super(Station, self).__init__(world=world, label=label)
 
-    def __str__(self):
-        return f"{self.label} at position {self.position}."
+    def __repr__(self):
+        return self.__class__.__name__ + (
+            f"(world={self.world}, position={self.position}, "
+            f"memory_noise={self.memory_noise}, "
+            f"memory_cutoff_time={self.memory_cutoff_time}, "
+            f"BSM_noise_model={self.BSM_noise_model}, "
+            f"creation_noise_channel={self.creation_noise_channel}, "
+            f"dark_count_probability={self.dark_count_probability}, "
+            f"label={self.label})"
+        )
 
     @property
     def type(self):
         return "Station"
 
-    def create_qubit(self):
+    def register_qubit(self, qubit):
+        self.qubits += [qubit]
+        qubit.update_info({"station": self})
+        qubit.add_destroy_callback(self.remove_qubit)
+        if self.memory_noise is not None:
+            qubit.add_time_dependent_noise(self.memory_noise)
+
+    def create_qubit(self, label=None):
         """Create a new qubit at this station.
 
         Returns
@@ -96,10 +103,15 @@ class Station(WorldObject):
             The created Qubit object.
 
         """
-        new_qubit = Qubit(
-            world=self.world, station=self, unresolved_noise=self.creation_noise_channel
-        )
-        self.qubits += [new_qubit]
+        if self.creation_noise_channel is not None:
+            new_qubit = Qubit(
+                world=self.world,
+                unresolved_noises=[self.creation_noise_channel],
+                label=label,
+            )
+        else:
+            new_qubit = Qubit(world=self.world, label=label)
+        self.register_qubit(new_qubit)
         if self.memory_cutoff_time is not None:
             discard_event = events.DiscardQubitEvent(
                 time=self.event_queue.current_time + self.memory_cutoff_time,

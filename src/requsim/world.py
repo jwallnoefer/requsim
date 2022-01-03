@@ -128,4 +128,7 @@ class World(object):
         """
         object_type = world_object.type
         type_list = self.world_objects[object_type]
-        type_list.remove(world_object)
+        try:
+            type_list.remove(world_object)
+        except ValueError:  # happens if object has been removed already
+            pass

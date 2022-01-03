@@ -58,28 +58,24 @@ class TestQuantumObjects(unittest.TestCase):
         self.assertEqual(
             quantum_object.last_updated, self.world.event_queue.current_time
         )
+        # see if str or repr throw any errors
+        str(quantum_object)
+        repr(quantum_object)
 
     def test_qubit(self):
-        qubit = Qubit(world=self.world, station=MagicMock(memory_noise=None))
+        qubit = Qubit(world=self.world)
         self._aux_general_test(qubit)
 
     def test_pair(self):
-        qubits = [
-            Qubit(world=self.world, station=MagicMock(memory_noise=None))
-            for i in range(2)
-        ]
+        qubits = [Qubit(world=self.world) for i in range(2)]
         pair = Pair(
             world=self.world, qubits=qubits, initial_state=np.diag([1, 0, 0, 0])
         )
         self._aux_general_test(pair)
 
     def test_unresolved_noise(self):
-        noisy_qubit = Qubit(
-            world=self.world,
-            station=MagicMock(None),
-            unresolved_noise=example_noise_channel,
-        )
-        other_qubit = Qubit(world=self.world, station=MagicMock(None))
+        noisy_qubit = Qubit(world=self.world, unresolved_noises=[example_noise_channel])
+        other_qubit = Qubit(world=self.world)
         test_state = np.random.random((4, 4))
         test_state = 1 / 2 * (test_state + mat.H(test_state))
         test_state = test_state / np.trace(test_state)
@@ -96,21 +92,19 @@ class TestQuantumObjects(unittest.TestCase):
         self.assertTrue(np.allclose(pair.state, expected_state))
 
     def test_station(self):
-        station = Station(world=self.world, id=1, position=0)
+        station = Station(world=self.world, position=0)
         self._aux_general_test(station)
         qubit = station.create_qubit()
         self.assertIsInstance(qubit, Qubit)
         self.assertIn(qubit, station.qubits)
-        self.assertIs(qubit.station, station)
+        self.assertIs(qubit._info["station"], station)
         # now test if destroying the qubit properly deregisters it
         qubit.destroy()
         self.assertNotIn(qubit, station.qubits)
 
     def test_cutoff_time_station(self):
         cutoff_time = np.random.random() * 40
-        station = Station(
-            world=self.world, id=1, position=0, memory_cutoff_time=cutoff_time
-        )
+        station = Station(world=self.world, position=0, memory_cutoff_time=cutoff_time)
         qubit = station.create_qubit()
         self.assertIn(qubit, self.world.world_objects[qubit.type])
         self.event_queue.resolve_until(cutoff_time - 10 ** -6 * cutoff_time)
@@ -135,7 +129,7 @@ class TestQuantumObjects(unittest.TestCase):
         test_state = 1 / 2 * (test_state + mat.H(test_state))
         test_state = test_state / np.trace(test_state)
         station_qubit = station.create_qubit()
-        other_qubit = Qubit(world=self.world, station=MagicMock(None))
+        other_qubit = Qubit(world=self.world)
         pair = Pair(
             world=self.world,
             qubits=[station_qubit, other_qubit],
@@ -170,7 +164,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_a.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_a = EntanglementSwappingEvent(time=0, pairs=[pair_1a, pair_2a])
+        event_a = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1a, pair_2a], station=station_a
+        )
         self.world.event_queue.add_event(event_a)
         self.world.event_queue.resolve_next_event()
         pair_a = self.world.world_objects["Pair"][0]
@@ -188,7 +184,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_b.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_b = EntanglementSwappingEvent(time=0, pairs=[pair_1b, pair_2b])
+        event_b = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1b, pair_2b], station=station_b
+        )
         self.world.event_queue.add_event(event_b)
         self.world.event_queue.resolve_next_event()
         pair_b = self.world.world_objects["Pair"][1]
@@ -208,7 +206,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_c.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_c = EntanglementSwappingEvent(time=0, pairs=[pair_1c, pair_2c])
+        event_c = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1c, pair_2c], station=station_c
+        )
         self.world.event_queue.add_event(event_c)
         self.world.event_queue.resolve_next_event()
         pair_c = self.world.world_objects["Pair"][2]
@@ -228,7 +228,9 @@ class TestQuantumObjects(unittest.TestCase):
             qubits=[station_d.create_qubit(), right_station.create_qubit()],
             initial_state=test_state,
         )
-        event_d = EntanglementSwappingEvent(time=0, pairs=[pair_1d, pair_2d])
+        event_d = EntanglementSwappingEvent(
+            time=0, pairs=[pair_1d, pair_2d], station=station_d
+        )
         self.world.event_queue.add_event(event_d)
         self.world.event_queue.resolve_next_event()
         pair_d = self.world.world_objects["Pair"][3]
@@ -236,15 +238,15 @@ class TestQuantumObjects(unittest.TestCase):
         self.assertIn(pair_d, self.world)
 
     def test_source(self):
-        stations = [Station(world=self.world, id=i, position=200 * i) for i in range(2)]
+        stations = [Station(world=self.world, position=200 * i) for i in range(2)]
         source = Source(world=self.world, position=100, target_stations=stations)
         self._aux_general_test(source)
         test_state = np.random.rand(4, 4)
         pair = source.generate_pair(test_state)
         self.assertIsInstance(pair, Pair)
         self.assertTrue(np.allclose(pair.state, test_state))
-        pair_stations = [qubit.station for qubit in pair.qubits]
-        self.assertEqual(pair_stations, stations)
+        self.assertIn(pair.qubit1, stations[0].qubits)
+        self.assertIn(pair.qubit2, stations[1].qubits)
 
     def test_scheduling_source(self):
         def dummy_schedule(source):
@@ -253,7 +255,7 @@ class TestQuantumObjects(unittest.TestCase):
         def dummy_generation(source):
             return np.dot(mat.phiplus, mat.H(mat.phiplus))
 
-        stations = [Station(world=self.world, id=i, position=200 * i) for i in range(2)]
+        stations = [Station(world=self.world, position=200 * i) for i in range(2)]
         source = SchedulingSource(
             world=self.world,
             position=100,

@@ -40,14 +40,20 @@ class WorldObject(ABC):
         self.last_updated = self.event_queue.current_time
         self.required_by_events = []
         self.is_blocked = False
+        self._destroy_callbacks = []
+        self.add_destroy_callback(self.world.deregister_world_object)
 
     def __str__(self):
         return self.label
 
+    def add_destroy_callback(self, callback_func):
+        self._destroy_callbacks += [callback_func]
+
     def destroy(self):
         """Remove this WorldObject from the world."""
-        # in the future it might be nice to also remove associated events etc.
-        self.world.deregister_world_object(self)
+        # in the future associated events may also be removed by subscribing to destruction
+        for callback_func in self._destroy_callbacks:
+            callback_func(self)
 
     @property
     def type(self):
