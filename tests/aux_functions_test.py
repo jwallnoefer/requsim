@@ -1,9 +1,16 @@
 import unittest
 from unittest.mock import MagicMock
+import pytest
 import numpy as np
-from requsim.libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
+from requsim.libs.aux_functions import (
+    apply_single_qubit_map,
+    apply_m_qubit_map,
+    distance,
+)
 from requsim.tools.noise_channels import w_noise_channel
 import requsim.libs.matrix as mat
+from requsim.quantum_objects import Source, Station, WorldObject
+from requsim.world import World
 
 
 def _single_qubit_wnoise(rho, p):
@@ -30,6 +37,12 @@ def _random_test_state(n):
     # normalize, so we have random real density matrix
     test_state = test_state / np.trace(test_state)
     return test_state
+
+
+class _PositionWorldObject(WorldObject):
+    def __init__(self, world, position, label=None):
+        self.position = position
+        super(_PositionWorldObject, self).__init__(world=world, label=label)
 
 
 class TestAuxFunctions(unittest.TestCase):
@@ -89,6 +102,72 @@ class TestAuxFunctions(unittest.TestCase):
             p=p,
         )
         self.assertTrue(np.allclose(trusted_way, new_way))
+
+
+# test distances with pytest instead of unittest now
+def test_distance_numbers():
+    assert distance(3, 4.5) == 1.5
+    assert distance(-4, 2) == 6
+    assert distance(2.0, -4) == 6
+    for i in range(100):
+        a = np.random.random()
+        b = np.random.random()
+        assert distance(a, b) == pytest.approx(np.abs(a - b))
+
+
+def test_distance_arrays():
+    assert distance(np.array([0, 1]), np.array([0, 2])) == pytest.approx(1)
+    assert distance(np.array([0, 0]), np.array([3, 4])) == pytest.approx(5)
+    for i in range(100):
+        num_dim = int(np.ceil(np.random.random() * 100))
+        a = np.random.random(num_dim) * 65
+        b = np.random.random(num_dim) * 115
+        assert distance(a, b) == pytest.approx(np.sqrt(np.sum((a - b) ** 2)))
+
+
+def test_distance_world_objects():
+    world = World()
+    position1 = 40
+    position2 = 22
+    a = _PositionWorldObject(world=world, position=position1)
+    b = _PositionWorldObject(world=world, position=position2)
+    assert distance(a, b) == pytest.approx(np.abs(position1 - position2))
+    position1 = np.random.random(2) * 40
+    position2 = np.random.random(2) * 22
+    a = _PositionWorldObject(world=world, position=position1)
+    b = _PositionWorldObject(world=world, position=position2)
+    assert distance(a, b) == pytest.approx(
+        np.sqrt(np.sum((position1 - position2) ** 2))
+    )
+    position1 = np.random.random(2) * 40
+    position2 = np.random.random(2) * 22
+    a = Station(world=world, position=position1)
+    b = Source(world=world, position=position2, target_stations=[a, a])
+    assert distance(a, b) == pytest.approx(
+        np.sqrt(np.sum((position1 - position2) ** 2))
+    )
+
+
+def test_distance_mixed_types():
+    world = World()
+    a = 3
+    b = _PositionWorldObject(world=world, position=5)
+    assert distance(a, b) == 2
+    a = _PositionWorldObject(world=world, position=np.array([0, 3.0]))
+    b = np.array([4.0, 0.0])
+    assert distance(a, b) == pytest.approx(5)
+    a = 3
+    b = np.random.random(2) * 22
+    with pytest.raises(TypeError):
+        distance(a, b)
+    a = np.random.random(2) * 22
+    b = np.random.random(3) * 23
+    with pytest.raises(ValueError):
+        distance(a, b)
+    a = list(np.random.random(2) * 22)
+    b = np.random.random(3) * 23
+    with pytest.raises(TypeError):
+        distance(a, b)
 
 
 if __name__ == "__main__":
