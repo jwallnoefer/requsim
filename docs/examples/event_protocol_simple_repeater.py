@@ -27,11 +27,29 @@ The protocol in this example corresponds to the 'simultaneous' variant of the
 protocol discussed there, but with a simpler error model.
 """
 import numpy as np
+import pandas as pd
 from requsim.tools.protocol import TwoLinkProtocol
+from requsim.tools.noise_channels import z_noise_channel
+from requsim.tools.evaluation import standard_bipartite_evaluation
+from requsim.libs.aux_functions import distance
+import requsim.libs.matrix as mat
 from requsim.events import EntanglementSwappingEvent
+from requsim.world import World
+from requsim.noise import NoiseChannel
+from requsim.quantum_objects import Station, SchedulingSource
 
 
-def SimpleProtocol(TwoLinkProtocol):
+def construct_dephasing_noise_channel(dephasing_time):
+    def lambda_dp(t):
+        return (1 - np.exp(-t / dephasing_time)) / 2
+
+    def dephasing_noise_func(rho, t):
+        return z_noise_channel(rho=rho, epsilon=lambda_dp(t))
+
+    return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_func)
+
+
+class SimpleProtocol(TwoLinkProtocol):
     # TwoLinkProtocol is a helpful abstract class that provides useful
     # attributes and methods for dealing with and evaluating repeater protocols
     # consisting of two links (supports multi-mode memories as well).
@@ -78,3 +96,94 @@ def SimpleProtocol(TwoLinkProtocol):
                 for qubit in pair.qubits:
                     qubit.destroy()
                 pair.destroy()
+
+
+def run(length, max_iter, params):
+    C = params["COMMUNICATION_SPEED"]
+    P_LINK = params["P_LINK"]
+    T_DP = params["T_DP"]
+    LAMBDA_BSM = params["LAMBDA_BSM"]
+    L_ATT = 22e3  # attenuation length
+
+    # define functions for link generation behavior
+    def state_generation(source):
+        # this returns the density matrix of a successful trial
+        # this particular function already assumes some things that are only
+        # appropriate for this particular setup, e.g. the source is at one
+        # of the stations and the end stations do not decohere
+        state = mat.phiplus @ mat.H(mat.phiplus)
+        comm_distance = max(
+            distance(source, source.target_stations[0]),
+            distance(source, source.target_stations[1]),
+        )
+        storage_time = 2 * comm_distance / C
+        for idx, station in enumerate(source.target_stations):
+            if station.memory_noise is not None:
+                state = station.memory_noise.apply_to(
+                    rho=state, qubit_indices=[idx], t=storage_time
+                )
+        return state
+
+    def time_distribution(source):
+        comm_distance = max(
+            distance(source, source.target_stations[0]),
+            distance(source, source.target_stations[1]),
+        )
+        trial_time = 2 * comm_distance / C
+        eta = P_LINK * np.exp(-comm_distance / L_ATT)
+        num_trials = np.random.geometric(eta)
+        time_taken = num_trials * trial_time
+        return time_taken, num_trials
+
+    # perform the world setup
+    world = World()
+    station_A = Station(world=world, position=0)
+    station_central = Station(
+        world=world,
+        position=length / 2,
+        memory_noise=construct_dephasing_noise_channel(T_DP),
+    )
+    station_B = Station(world=world, position=length)
+    source_A = SchedulingSource(
+        world=world,
+        position=station_central.position,
+        target_stations=[station_A, station_central],
+        time_distribution=time_distribution,
+        state_generation=state_generation,
+    )
+    source_B = SchedulingSource(
+        world=world,
+        position=station_central.position,
+        target_stations=[station_central, station_B],
+        time_distribution=time_distribution,
+        state_generation=state_generation,
+    )
+    protocol = SimpleProtocol(world=world, communication_speed=C)
+    protocol.setup()
+
+    while len(protocol.time_list) < max_iter:
+        protocol.check()
+        world.event_queue.resolve_next_event()
+    return protocol
+
+
+if __name__ == "__main__":
+    params = {
+        "P_LINK": 0.80,  # link generation probability
+        "T_DP": 100e-3,  # dephasing time
+        "LAMBDA_BSM": 0.99,  # Bell-State-Measurement ideality parameter
+        "COMMUNICATION_SPEED": 2e8,  # speed of light in optical fibre
+    }
+    length_list = np.linspace(20e3, 300e3, num=16)
+    max_iter = 1000
+    raw_data = [
+        run(length=length, max_iter=max_iter, params=params).data
+        for length in length_list
+    ]
+    result_list = [standard_bipartite_evaluation(data_frame=df) for df in raw_data]
+    results = pd.DataFrame(
+        data=result_list,
+        index=length_list,
+        columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std"],
+    )
+    print(results)
