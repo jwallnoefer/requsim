@@ -108,20 +108,11 @@ def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
         time_interval=data_frame["time"].iloc[-1],
         return_std=True,
     )
-    key_per_resource, key_per_resource_std = calculate_keyrate_channel_use(
-        correlations_z=correlations_z,
-        correlations_x=correlations_x,
-        err_corr_ineff=err_corr_ineff,
-        resource_list=data_frame["resource_cost_max"],
-        return_std=True,
-    )
     return [
         fidelity,
         fidelity_std,
         key_per_time,
         key_per_time_std,
-        key_per_resource,
-        key_per_resource_std,
     ]
 
 
