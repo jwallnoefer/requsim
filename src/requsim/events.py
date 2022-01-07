@@ -280,7 +280,8 @@ class SourceEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         new_pair = self.source.generate_pair(
@@ -335,7 +336,8 @@ class EntanglementSwappingEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         pair1, pair2 = self.pairs
@@ -457,7 +459,8 @@ class DiscardQubitEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         qubit_pair = self.qubit.higher_order_object
@@ -478,9 +481,11 @@ class EntanglementPurificationEvent(Event):
     time : scalar
         Time at which the event will be resolved.
     pairs : list of Pairs
-        The pairs involved in the entanglement purification protocol.
-    communication_speed : scalar
-        speed at which the classical information travels
+        The pairs involved in the entanglement purification protocol. Make
+        sure these are at the correct stations and have the same qubit ordering.
+    communication_time : scalar
+        how long it takes for the result of the protocol to be communcated
+        the remaining pair will be blocked for that amount of time
     protocol : {"dejmps"} or callable
         Can be one of the pre-installed or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
@@ -491,7 +496,7 @@ class EntanglementPurificationEvent(Event):
     ----------
     pairs
     protocol
-    communication_speed
+    communication_time
 
     """
 
@@ -531,7 +536,8 @@ class EntanglementPurificationEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         # probably could use a check that pairs are between same stations?
