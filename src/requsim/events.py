@@ -280,7 +280,8 @@ class SourceEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         new_pair = self.source.generate_pair(
@@ -335,22 +336,48 @@ class EntanglementSwappingEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
-        # it would be nice if this could handle arbitrary configurations
-        # instead of relying on strict indexes of left and right pairs
-        left_pair = self.pairs[0]
-        right_pair = self.pairs[1]
-        assert left_pair.qubits[1] in self.station.qubits
-        assert right_pair.qubits[0] in self.station.qubits
-        swapping_station = self.station
-        left_pair.update_time()
-        right_pair.update_time()
-        four_qubit_state = mat.tensor(left_pair.state, right_pair.state)
+        pair1, pair2 = self.pairs
+        # find qubits at swapping station
+        swapping_qubits = []
+        swapping_indices = []
+        leftover_qubits = []
+        leftover_indices = []
+        for idx, qubit in enumerate(pair1.qubits):
+            if qubit in self.station.qubits:
+                swapping_qubits += [qubit]
+                swapping_indices += [idx]
+            else:
+                leftover_qubits += [qubit]
+                leftover_indices += [idx]
+        assert len(swapping_qubits) == 1
+        for idx, qubit in enumerate(pair2.qubits):
+            if qubit in self.station.qubits:
+                swapping_qubits += [qubit]
+                swapping_indices += [idx + 2]
+            else:
+                leftover_qubits += [qubit]
+                leftover_indices += [idx + 2]
+        assert len(swapping_qubits) == 2
+        pair1.update_time()
+        pair2.update_time()
+        four_qubit_state = mat.tensor(pair1.state, pair2.state)
+        four_qubit_state = mat.reorder(
+            rho=four_qubit_state,
+            sys=[
+                leftover_indices[0],
+                swapping_indices[0],
+                swapping_indices[1],
+                leftover_indices[1],
+            ],
+        )
+        noise_model = self.station.BSM_noise_model
         # non-ideal-bell-measurement
-        if swapping_station.BSM_noise_model.channel_before is not None:
-            noise_channel = swapping_station.BSM_noise_model.channel_before
+        if noise_model.channel_before is not None:
+            noise_channel = noise_model.channel_before
             if noise_channel.n_qubits == 4:
                 four_qubit_state = noise_channel(four_qubit_state)
             elif noise_channel.n_qubits == 2:
@@ -363,30 +390,27 @@ class EntanglementSwappingEvent(Event):
                     + str(noise_channel)
                     + " is not supported by Bell State Measurement. Expects a 2- or 4-qubit channel."
                 )
-        if swapping_station.BSM_noise_model.map_replace is not None:
-            two_qubit_state = swapping_station.BSM_noise_model.map_replace(
-                four_qubit_state
-            )
+        if noise_model.map_replace is not None:
+            two_qubit_state = noise_model.map_replace(four_qubit_state)
         else:  # do the main thing
             my_proj = mat.tensor(mat.I(2), mat.phiplus, mat.I(2))
             two_qubit_state = np.dot(np.dot(mat.H(my_proj), four_qubit_state), my_proj)
             two_qubit_state = two_qubit_state / np.trace(two_qubit_state)
-        if (
-            swapping_station.BSM_noise_model.channel_after is not None
-        ):  # not sure this even makes sense in this context because qubits at station are expected to be gone
-            noise_channel = swapping_station.BSM_noise_model.channel_after
+        if noise_model.channel_after is not None:
+            # not sure this even makes sense in this context because qubits at station are expected to be gone
+            noise_channel = noise_model.channel_after
             assert noise_channel.n_qubits == 2
             two_qubit_state = noise_channel(two_qubit_state)
         new_pair = quantum_objects.Pair(
-            world=left_pair.world,
-            qubits=[left_pair.qubits[0], right_pair.qubits[1]],
+            world=pair1.world,
+            qubits=leftover_qubits,
             initial_state=two_qubit_state,
         )
         # cleanup
-        left_pair.qubits[1].destroy()
-        right_pair.qubits[0].destroy()
-        left_pair.destroy()
-        right_pair.destroy()
+        for qubit in swapping_qubits:
+            qubit.destroy()
+        pair1.destroy()
+        pair2.destroy()
         return {"output_pair": new_pair}
 
 
@@ -435,7 +459,8 @@ class DiscardQubitEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         qubit_pair = self.qubit.higher_order_object
@@ -456,9 +481,11 @@ class EntanglementPurificationEvent(Event):
     time : scalar
         Time at which the event will be resolved.
     pairs : list of Pairs
-        The pairs involved in the entanglement purification protocol.
-    communication_speed : scalar
-        speed at which the classical information travels
+        The pairs involved in the entanglement purification protocol. Make
+        sure these are at the correct stations and have the same qubit ordering.
+    communication_time : scalar
+        how long it takes for the result of the protocol to be communcated
+        the remaining pair will be blocked for that amount of time
     protocol : {"dejmps"} or callable
         Can be one of the pre-installed or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
@@ -469,7 +496,7 @@ class EntanglementPurificationEvent(Event):
     ----------
     pairs
     protocol
-    communication_speed
+    communication_time
 
     """
 
@@ -509,7 +536,8 @@ class EntanglementPurificationEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         # probably could use a check that pairs are between same stations?
