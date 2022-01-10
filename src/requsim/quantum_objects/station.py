@@ -12,9 +12,9 @@ class Station(WorldObject):
     ----------
     world : World
         This WorldObject is an object in this world.
-    position : scalar
-        Position in meters in the 1D line for this linear repeater.
-    memory_noise : callable or None
+    position : scalar or np.ndarray
+        Position on 1D line (scalar) or coordinates (np.ndarray).
+    memory_noise : NoiseChannel or None
         Should take parameters rho (density matrix) and t (time). Default: None
     memory_cutoff_time : scalar or None
         Qubits will be discarded after this amount of time in memory.
@@ -43,9 +43,6 @@ class Station(WorldObject):
         "Station"
     memory_noise : NoiseChannel or None
     memory_cutoff_time : scalar or None
-    resource_tracking : defaultdict
-        Intermediate store for carrying over resources used by discarded
-        pairs/qubits.
     BSM_noise_model : NoiseModel
     creation_noise_channel : NoiseChannel or None
     dark_count_probability : scalar
@@ -129,6 +126,5 @@ class Station(WorldObject):
                     repr(qubit), repr(self)
                 )
             )
-            # print(self.event_queue.current_time)
-            # print(self.event_queue.queue)
-            # print(self.world.world_objects)
+        if self.memory_noise is not None:
+            qubit.remove_time_dependent_noise(self.memory_noise)

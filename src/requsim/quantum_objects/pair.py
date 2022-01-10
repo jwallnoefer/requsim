@@ -136,9 +136,22 @@ class Pair(WorldObject):
             self.destroy()
 
     def is_between_stations(self, station1, station2):
-        return (
-            self.qubit1.station == station1 and self.qubit2.station == station2
-        ) or (self.qubit1.station == station2 and self.qubit2.station == station1)
+        """Check whether qubits are at specified stations.
+
+        Parameters
+        ----------
+        station1 : Station
+        station2 : Station
+
+        Returns
+        -------
+        bool
+            True if pair is between station1 and station2, False otherwise.
+
+        """
+        return (self.qubit1 in station1.qubits and self.qubit2 in station2.qubits) or (
+            self.qubit1 in station2.qubits and self.qubit2 in station1.qubits
+        )
 
     def _on_update_time(self):
         self.qubit1.update_time()

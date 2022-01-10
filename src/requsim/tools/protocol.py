@@ -5,8 +5,6 @@ import pandas as pd
 from ..events import SourceEvent
 from ..libs.aux_functions import distance
 
-C = 2e8  # speed of light in optical fiber
-
 
 class Protocol(ABC):
     """Abstract base class for protocols.
@@ -68,23 +66,15 @@ class TwoLinkProtocol(Protocol):
     But it is still abstract and misses the central check method.
     """
 
-    def __init__(self, world):
+    def __init__(self, world, communication_speed):
         self.time_list = []
         self.state_list = []
-        self.resource_cost_max_list = []
-        self.resource_cost_add_list = []
+        self.communication_speed = communication_speed
         super(TwoLinkProtocol, self).__init__(world=world)
 
     @property
     def data(self):
-        return pd.DataFrame(
-            {
-                "time": self.time_list,
-                "state": self.state_list,
-                "resource_cost_max": self.resource_cost_max_list,
-                "resource_cost_add": self.resource_cost_add_list,
-            }
-        )
+        return pd.DataFrame({"time": self.time_list, "state": self.state_list})
 
     def setup(self):
         """Identifies the stations and sources in the world.
@@ -126,11 +116,6 @@ class TwoLinkProtocol(Protocol):
         )  # schedule_event is a required method for this protocol
         assert callable(getattr(self.source_B, "schedule_event", None))
 
-    def _pair_is_between_stations(self, pair, station1, station2):
-        return (
-            pair.qubit1.station == station1 and pair.qubit2.station == station2
-        ) or (pair.qubit1.station == station2 and pair.qubit2.station == station1)
-
     def _get_left_pairs(self):
         try:
             pairs = self.world.world_objects["Pair"]
@@ -138,9 +123,7 @@ class TwoLinkProtocol(Protocol):
             pairs = []
         return list(
             filter(
-                lambda x: self._pair_is_between_stations(
-                    x, self.station_A, self.station_central
-                ),
+                lambda x: x.is_between_stations(self.station_A, self.station_central),
                 pairs,
             )
         )
@@ -152,9 +135,7 @@ class TwoLinkProtocol(Protocol):
             pairs = []
         return list(
             filter(
-                lambda x: self._pair_is_between_stations(
-                    x, self.station_central, self.station_B
-                ),
+                lambda x: x.is_between_stations(self.station_central, self.station_B),
                 pairs,
             )
         )
@@ -166,9 +147,7 @@ class TwoLinkProtocol(Protocol):
             pairs = []
         return list(
             filter(
-                lambda x: self._pair_is_between_stations(
-                    x, self.station_A, self.station_B
-                ),
+                lambda x: x.is_between_stations(self.station_A, self.station_B),
                 pairs,
             )
         )
@@ -204,10 +183,8 @@ class TwoLinkProtocol(Protocol):
                 distance(self.station_B, self.station_central),
             ]
         )
-        comm_time = comm_distance / C
+        comm_time = comm_distance / self.communication_speed
 
         self.time_list += [self.world.event_queue.current_time + comm_time]
         self.state_list += [long_range_pair.state]
-        self.resource_cost_max_list += [long_range_pair.resource_cost_max]
-        self.resource_cost_add_list += [long_range_pair.resource_cost_add]
         return

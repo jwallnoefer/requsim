@@ -107,7 +107,7 @@ def apply_m_qubit_map(map_func, qubit_indices, rho, *args, **kwargs):
     qubit_indices = sorted(qubit_indices)
     index_list = qubit_indices + [n + qubit_index for qubit_index in qubit_indices]
     # still not found a nicer way for the iteration here
-    out = np.zeros_like(rho)
+    out = np.zeros(rho.shape, dtype=complex)
     for idx in np.ndindex(*(2, 2) * (n - m)):
         my_slice = list(idx)
         for current_idx in index_list:
