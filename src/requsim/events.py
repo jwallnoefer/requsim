@@ -1,5 +1,3 @@
-import sys
-import abc
 from abc import ABC, abstractmethod
 from .libs import matrix as mat
 from .libs.epp import dejmps_protocol
@@ -26,6 +24,10 @@ class Event(ABC):
         (lower number means being resolved first) Default: 20
     ignore_blocked : bool
         Whether the event should act even on blocked objects. Default: False
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
 
     Attributes
     ----------
@@ -46,6 +48,7 @@ class Event(ABC):
         required_objects=[],
         priority=20,
         ignore_blocked=False,
+        callback_functions=[],
         *args,
         **kwargs,
     ):
@@ -58,7 +61,7 @@ class Event(ABC):
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
         self._return_dict = {"event_type": self.type, "resolve_successful": True}
-        self._callback_functions = []
+        self._callback_functions = callback_functions
 
     @abstractmethod
     def __repr__(self):
@@ -173,6 +176,10 @@ class GenericEvent(Event):
         Keyword only argument. Default: 20
     ignore_blocked: bool
         Keyword only argument. Default: False
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
     **kwargs : any
         kwargs for resolve_function.
 
@@ -186,6 +193,7 @@ class GenericEvent(Event):
         required_objects=[],
         priority=20,
         ignore_blocked=False,
+        callback_functions=[],
         **kwargs,
     ):
         self._resolve_function = resolve_function
@@ -196,6 +204,7 @@ class GenericEvent(Event):
             required_objects=required_objects,
             priority=priority,
             ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -230,6 +239,10 @@ class SourceEvent(Event):
         The source object generating the entangled pair.
     initial_state : np.ndarray
         Density matrix of the two qubit system being generated.
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
     *args, **kwargs :
         additional optional args and kwargs to pass to the the
         generate_pair method of `source`
@@ -243,13 +256,17 @@ class SourceEvent(Event):
 
     """
 
-    def __init__(self, time, source, initial_state, *args, **kwargs):
+    def __init__(
+        self, time, source, initial_state, callback_functions=[], *args, **kwargs
+    ):
         self.source = source
         self.initial_state = initial_state
         self.generation_args = args
         self.generation_kwargs = kwargs
         super(SourceEvent, self).__init__(
-            time=time, required_objects=[self.source, *self.source.target_stations]
+            time=time,
+            required_objects=[self.source, *self.source.target_stations],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -301,6 +318,10 @@ class EntanglementSwappingEvent(Event):
         The left pair and the right pair.
     station : Station
         The station where the entanglement swapping is performed.
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
 
     Attributes
     ----------
@@ -309,13 +330,14 @@ class EntanglementSwappingEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, station):
+    def __init__(self, time, pairs, station, callback_functions=[]):
         self.pairs = pairs
         self.station = station
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -429,6 +451,10 @@ class DiscardQubitEvent(Event):
         Default: 39 (because discard events should get processed last)
     ignore_blocked : bool
         Whether the event should act on blocked quantum objects. Default: True
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
 
     Attributes
     ----------
@@ -436,13 +462,16 @@ class DiscardQubitEvent(Event):
 
     """
 
-    def __init__(self, time, qubit, priority=39, ignore_blocked=True):
+    def __init__(
+        self, time, qubit, priority=39, ignore_blocked=True, callback_functions=[]
+    ):
         self.qubit = qubit
         super(DiscardQubitEvent, self).__init__(
             time=time,
             required_objects=[self.qubit],
             priority=priority,
-            ignore_blocked=True,
+            ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -491,6 +520,10 @@ class EntanglementPurificationEvent(Event):
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
 
     Attributes
     ----------
@@ -500,7 +533,9 @@ class EntanglementPurificationEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, communication_time, protocol="dejmps"):
+    def __init__(
+        self, time, pairs, communication_time, protocol="dejmps", callback_functions=[]
+    ):
         self.pairs = pairs
         if protocol == "dejmps":
             self.protocol = dejmps_protocol
@@ -516,6 +551,7 @@ class EntanglementPurificationEvent(Event):
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -594,6 +630,10 @@ class UnblockEvent(Event):
         The quantum objects to be unblocked.
     priority : int (expected 0...39)
         Default: 0 (because unblocking should happen as soon as possible)
+    callback_functions : list of callables
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: []
 
     Attributes
     ----------
@@ -601,13 +641,14 @@ class UnblockEvent(Event):
 
     """
 
-    def __init__(self, time, quantum_objects, priority=0):
+    def __init__(self, time, quantum_objects, priority=0, callback_functions=[]):
         self.quantum_objects = quantum_objects
         super(UnblockEvent, self).__init__(
             time=time,
             required_objects=self.quantum_objects,
             priority=priority,
             ignore_blocked=True,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
