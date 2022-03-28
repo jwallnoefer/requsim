@@ -1,8 +1,9 @@
 """Tests for noise channels."""
 import pytest
-from requsim.noise import NoiseChannel
+from requsim.noise import NoiseChannel, freeze_noise_channel
 import numpy as np
 import requsim.libs.matrix as mat
+from unittest.mock import MagicMock
 
 
 def _random_n_qubit_state(n):
@@ -63,3 +64,45 @@ def test_channel_composition():
         out1 = test_channel(test_state)
         out2 = test_channel.apply_to(rho=test_state, qubit_indices=np.arange(n_qubits))
         assert np.allclose(out1, out2)
+
+
+def _assert_called_with_without_rho(mock, *args, **kwargs):
+    for call in mock.call_args_list:
+        assert call.args[1:] == args
+        assert call.kwargs == kwargs
+
+
+def test_freeze_noise_channel():
+    for n_qubits in range(1, 7):
+        test_state = _random_n_qubit_state(n=n_qubits)
+        for noise_qubits in range(1, n_qubits + 1):
+            mock_function = MagicMock(
+                return_value=_random_n_qubit_state(n=noise_qubits)
+            )
+            test_channel = NoiseChannel(
+                n_qubits=noise_qubits, channel_function=mock_function
+            )
+            # without frozen args/kwargs
+            frozen_channel = freeze_noise_channel(test_channel)
+            if n_qubits == noise_qubits:
+                frozen_channel(test_state)
+                mock_function.assert_called_with(test_state)
+                mock_function.reset_mock()
+            qubit_indices = np.random.choice(np.arange(n_qubits), size=noise_qubits)
+            frozen_channel.apply_to(test_state, qubit_indices=qubit_indices)
+            _assert_called_with_without_rho(mock_function)
+            mock_function.reset_mock()
+            # with frozen args and kwargs
+            test_args = (3, "bear", 42.2)
+            test_kwargs = {"foo": 33, "bar": "apple"}
+            frozen_channel = freeze_noise_channel(
+                test_channel, *test_args, **test_kwargs
+            )
+            if n_qubits == noise_qubits:
+                frozen_channel(test_state)
+                mock_function.assert_called_with(test_state, *test_args, **test_kwargs)
+                mock_function.reset_mock()
+            qubit_indices = np.random.choice(np.arange(n_qubits), size=noise_qubits)
+            frozen_channel.apply_to(test_state, qubit_indices=qubit_indices)
+            _assert_called_with_without_rho(mock_function, *test_args, **test_kwargs)
+            mock_function.reset_mock()
