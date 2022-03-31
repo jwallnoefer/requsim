@@ -1,9 +1,39 @@
-# requsim
+# ReQuSim
 
-Page under construction
+ReQuSim is a simulation platform for quantum repeaters. It allows to evaluate
+quantum repeater strategies for long-distance quantum key distribution and
+entanglement distribution protocols, while taking into account arbitrary
+error models.
 
 
+## Installation
 
+You can install ReQuSim into your python environment from the Python Package
+Index:
+
+```
+pip install requsim
+```
+
+As with all python packages this can possibly overwrite already installed
+package versions in your environment with its dependencies, which is why
+installing it in a dedicated virtual environment may be preferable.
+
+## Documentation
+
+The Documentation is hosted on [readthedocs](https://readthedocs.org/) and
+includes some example setups of how to use ReQuSim to simulate a simple
+key distribution protocols.
+
+LINK
+
+## Scope
+
+WiP
+
+### Differences from other quantum network simulators
+
+WiP
 
 ## Publications and related projects
 An earlier (unreleased) version of requsim was used for this publication:
