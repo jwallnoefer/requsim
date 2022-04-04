@@ -82,7 +82,7 @@ class CallbackProtocol(TwoLinkProtocol):
         initial_event_B = self.source_B.schedule_event()
         initial_event_B.add_callback(self._check_for_swapping_B)
 
-    def check(self):
+    def check(self, message=None):
         pass
 
 
