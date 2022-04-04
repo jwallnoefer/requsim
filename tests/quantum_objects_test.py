@@ -107,7 +107,7 @@ class TestQuantumObjects(unittest.TestCase):
         station = Station(world=self.world, position=0, memory_cutoff_time=cutoff_time)
         qubit = station.create_qubit()
         self.assertIn(qubit, self.world.world_objects[qubit.type])
-        self.event_queue.resolve_until(cutoff_time - 10 ** -6 * cutoff_time)
+        self.event_queue.resolve_until(cutoff_time - 10**-6 * cutoff_time)
         self.assertIn(qubit, self.world.world_objects[qubit.type])
         self.event_queue.resolve_until(cutoff_time)
         self.assertNotIn(qubit, self.world.world_objects[qubit.type])
