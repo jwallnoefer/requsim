@@ -216,7 +216,8 @@ class GenericEvent(Event):
             self.__class__.__name__
             + f"(time={self.time}, resolve_function={self._resolve_function},"
             + ", ".join(map(str, self._resolve_function_args))
-            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked},"
+            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked}, "
+            + f"callback_functions={self._callback_functions}, "
             + ", ".join(
                 [
                     "{}={}".format(str(k), str(v))
@@ -276,7 +277,8 @@ class SourceEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state},"
+            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state}, "
+            + f"callback_functions={self._callback_functions}, "
             + ", ".join(map(str, self.generation_args))
             + ", ".join(
                 [
@@ -345,7 +347,11 @@ class EntanglementSwappingEvent(Event):
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + f"(time={self.time}, pairs={self.pairs})"
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, pairs={self.pairs}), "
+            + f"callback_functions={self._callback_functions}"
+        )
 
     def __str__(self):
         return (
@@ -481,7 +487,8 @@ class DiscardQubitEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked})"
+            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -566,7 +573,9 @@ class EntanglementPurificationEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, communication_speed={self.communication_speed})"
+            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, "
+            + f"communication_speed={self.communication_speed}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -663,7 +672,8 @@ class UnblockEvent(Event):
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority})"
+            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
