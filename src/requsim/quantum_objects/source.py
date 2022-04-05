@@ -104,7 +104,18 @@ class SchedulingSource(Source):
         super(SchedulingSource, self).__init__(world, position, target_stations, label)
 
     def schedule_event(self):
-        time_delay, times_tried = self.time_distribution(source=self)
+        """Schedule a SourceEvent according to the specified rules.
+
+        Will generate a pair after a time detemined by `time_distribution`
+        and in a state specified by `state_generation`.
+
+        Returns
+        -------
+        SourceEvent
+            The event that was scheduled by this.
+
+        """
+        time_delay = self.time_distribution(source=self)
         scheduled_time = self.event_queue.current_time + time_delay
         initial_state = self.state_generation(
             source=self

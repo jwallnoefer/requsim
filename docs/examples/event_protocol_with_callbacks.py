@@ -121,7 +121,7 @@ def run(length, max_iter, params):
         eta = P_LINK * np.exp(-comm_distance / L_ATT)
         num_trials = np.random.geometric(eta)
         time_taken = num_trials * trial_time
-        return time_taken, num_trials
+        return time_taken
 
     def BSM_error_func(rho):
         return LAMBDA_BSM * rho + (1 - LAMBDA_BSM) * mat.I(4) / 4

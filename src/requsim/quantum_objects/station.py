@@ -85,6 +85,24 @@ class Station(WorldObject):
         return "Station"
 
     def register_qubit(self, qubit):
+        """Add a qubit to be tracked by this station.
+
+        This is usually used when the qubit is present at this station.
+        It causes the qubit to be influenced by properties of the station,
+        most prominently the noise model of station.memory_noise for being
+        stored in a quantum memory.
+
+
+        Parameters
+        ----------
+        qubit : Qubit
+            The qubit to add.
+
+        Returns
+        -------
+        None
+
+        """
         self.qubits += [qubit]
         qubit.update_info({"station": self})
         qubit.add_destroy_callback(self.remove_qubit)
@@ -93,6 +111,11 @@ class Station(WorldObject):
 
     def create_qubit(self, label=None):
         """Create a new qubit at this station.
+
+        Parameters
+        ----------
+        label : str
+            Optionally assign a label to the Qubit (the default is None).
 
         Returns
         -------
@@ -118,6 +141,22 @@ class Station(WorldObject):
         return new_qubit
 
     def remove_qubit(self, qubit):
+        """Remove a qubit from the station.
+
+        The qubit is no longer tracked by the station and no longer influenced
+        by the error models tied to that station.
+        Basically undoes what the register_qubit method did.
+
+        Parameters
+        ----------
+        qubit : Qubit
+            Description of parameter `qubit`.
+
+        Returns
+        -------
+        None
+
+        """
         try:
             self.qubits.remove(qubit)
         except ValueError:
