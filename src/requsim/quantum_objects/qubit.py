@@ -10,13 +10,14 @@ class Qubit(WorldObject):
     ----------
     world : World
         This WorldObject is an object in this world.
-    unresolved_noises : list of NoiseChannel
+    unresolved_noises : list of NoiseChannel, or None
         Noise that affected the qubit, but has not been applied to the state
-        yet. Default: []
-    info : dict
+        yet. Default: None
+    info : dict or None
         Initial information dictionary for storing additional information such
         as where the qubit is located and whether it is part of a pair. This
-        should not be used as a workaround to access these actions
+        should not be used as a workaround to access these actions.
+        Default: None
     label : str or None
         Optionally, provide a custom label.
 
@@ -31,10 +32,13 @@ class Qubit(WorldObject):
     """
 
     # station should also know about which qubits are at its location
-    def __init__(self, world, unresolved_noises=[], info={}, label=None):
+    def __init__(self, world, unresolved_noises=None, info=None, label=None):
+        if unresolved_noises is None:
+            unresolved_noises = []
         self._unresolved_noises = unresolved_noises
         self._info = defaultdict(lambda: None)
-        self._info.update(info)
+        if info is not None:
+            self._info.update(info)
         self._noise_handlers = []
         self._time_dependent_noises = []
         self.higher_order_object = None

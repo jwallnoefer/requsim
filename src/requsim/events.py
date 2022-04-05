@@ -1,5 +1,3 @@
-import sys
-import abc
 from abc import ABC, abstractmethod
 from .libs import matrix as mat
 from .libs.epp import dejmps_protocol
@@ -18,14 +16,18 @@ class Event(ABC):
     ----------
     time : scalar
         The time at which the event will be resolved.
-    required_objects : list of QuantumObjects
+    required_objects : list of QuantumObjects, or None
         Event will only resolve if all of these still exist at `time`.
-        Default: []
+        Default: None
     priority : int (expected 0...39)
         prioritize events that happen at the same time according to this
         (lower number means being resolved first) Default: 20
     ignore_blocked : bool
         Whether the event should act even on blocked objects. Default: False
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -43,13 +45,16 @@ class Event(ABC):
     def __init__(
         self,
         time,
-        required_objects=[],
+        required_objects=None,
         priority=20,
         ignore_blocked=False,
+        callback_functions=None,
         *args,
         **kwargs,
     ):
         self.time = time
+        if required_objects is None:
+            required_objects = []
         self.required_objects = required_objects
         for required_object in self.required_objects:
             assert required_object in required_object.world
@@ -58,7 +63,9 @@ class Event(ABC):
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
         self._return_dict = {"event_type": self.type, "resolve_successful": True}
-        self._callback_functions = []
+        if callback_functions is None:
+            callback_functions = []
+        self._callback_functions = callback_functions
 
     @abstractmethod
     def __repr__(self):
@@ -167,12 +174,16 @@ class GenericEvent(Event):
         Function that will be called when the resolve method is called.
     *args : any
         args for resolve_function.
-    required_objects : list of QuantumObjects
-        Keyword only argument. Default: []
+    required_objects : list of QuantumObjects, or None
+        Keyword only argument. Default: None
     priority : int
         Keyword only argument. Default: 20
     ignore_blocked: bool
         Keyword only argument. Default: False
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
     **kwargs : any
         kwargs for resolve_function.
 
@@ -183,9 +194,10 @@ class GenericEvent(Event):
         time,
         resolve_function,
         *args,
-        required_objects=[],
+        required_objects=None,
         priority=20,
         ignore_blocked=False,
+        callback_functions=None,
         **kwargs,
     ):
         self._resolve_function = resolve_function
@@ -196,6 +208,7 @@ class GenericEvent(Event):
             required_objects=required_objects,
             priority=priority,
             ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -203,7 +216,8 @@ class GenericEvent(Event):
             self.__class__.__name__
             + f"(time={self.time}, resolve_function={self._resolve_function},"
             + ", ".join(map(str, self._resolve_function_args))
-            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked},"
+            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked}, "
+            + f"callback_functions={self._callback_functions}, "
             + ", ".join(
                 [
                     "{}={}".format(str(k), str(v))
@@ -230,6 +244,10 @@ class SourceEvent(Event):
         The source object generating the entangled pair.
     initial_state : np.ndarray
         Density matrix of the two qubit system being generated.
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
     *args, **kwargs :
         additional optional args and kwargs to pass to the the
         generate_pair method of `source`
@@ -243,19 +261,24 @@ class SourceEvent(Event):
 
     """
 
-    def __init__(self, time, source, initial_state, *args, **kwargs):
+    def __init__(
+        self, time, source, initial_state, callback_functions=None, *args, **kwargs
+    ):
         self.source = source
         self.initial_state = initial_state
         self.generation_args = args
         self.generation_kwargs = kwargs
         super(SourceEvent, self).__init__(
-            time=time, required_objects=[self.source, *self.source.target_stations]
+            time=time,
+            required_objects=[self.source, *self.source.target_stations],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state},"
+            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state}, "
+            + f"callback_functions={self._callback_functions}, "
             + ", ".join(map(str, self.generation_args))
             + ", ".join(
                 [
@@ -301,6 +324,10 @@ class EntanglementSwappingEvent(Event):
         The left pair and the right pair.
     station : Station
         The station where the entanglement swapping is performed.
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -309,17 +336,22 @@ class EntanglementSwappingEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, station):
+    def __init__(self, time, pairs, station, callback_functions=None):
         self.pairs = pairs
         self.station = station
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + f"(time={self.time}, pairs={self.pairs})"
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, pairs={self.pairs}), "
+            + f"callback_functions={self._callback_functions}"
+        )
 
     def __str__(self):
         return (
@@ -429,6 +461,10 @@ class DiscardQubitEvent(Event):
         Default: 39 (because discard events should get processed last)
     ignore_blocked : bool
         Whether the event should act on blocked quantum objects. Default: True
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -436,19 +472,23 @@ class DiscardQubitEvent(Event):
 
     """
 
-    def __init__(self, time, qubit, priority=39, ignore_blocked=True):
+    def __init__(
+        self, time, qubit, priority=39, ignore_blocked=True, callback_functions=None
+    ):
         self.qubit = qubit
         super(DiscardQubitEvent, self).__init__(
             time=time,
             required_objects=[self.qubit],
             priority=priority,
-            ignore_blocked=True,
+            ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked})"
+            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -491,6 +531,10 @@ class EntanglementPurificationEvent(Event):
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -500,7 +544,14 @@ class EntanglementPurificationEvent(Event):
 
     """
 
-    def __init__(self, time, pairs, communication_time, protocol="dejmps"):
+    def __init__(
+        self,
+        time,
+        pairs,
+        communication_time,
+        protocol="dejmps",
+        callback_functions=None,
+    ):
         self.pairs = pairs
         if protocol == "dejmps":
             self.protocol = dejmps_protocol
@@ -516,12 +567,15 @@ class EntanglementPurificationEvent(Event):
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, communication_speed={self.communication_speed})"
+            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, "
+            + f"communication_speed={self.communication_speed}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -594,6 +648,10 @@ class UnblockEvent(Event):
         The quantum objects to be unblocked.
     priority : int (expected 0...39)
         Default: 0 (because unblocking should happen as soon as possible)
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -601,19 +659,21 @@ class UnblockEvent(Event):
 
     """
 
-    def __init__(self, time, quantum_objects, priority=0):
+    def __init__(self, time, quantum_objects, priority=0, callback_functions=None):
         self.quantum_objects = quantum_objects
         super(UnblockEvent, self).__init__(
             time=time,
             required_objects=self.quantum_objects,
             priority=priority,
             ignore_blocked=True,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority})"
+            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):

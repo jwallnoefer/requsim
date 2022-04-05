@@ -55,12 +55,23 @@ class SimpleProtocol(TwoLinkProtocol):
     # consisting of two links (supports multi-mode memories as well).
     # It needs to be initialized via its `setup` method after world setup
     # is complete, in order to find all the relevant objects in the world.
-    def check(self):
+    def check(self, message=None):
         """Check current status and schedule new events.
 
         This looks globally at the status of the whole `world` and decides
         which events should be scheduled because of it. It is intended to be
         called after every change in the `world`.
+
+        Parameters
+        ----------
+        message : dict or None
+            Optional additional information for the Protocol to consider.
+            This particular protocol does not use it. Default is None.
+
+        Returns
+        -------
+        None
+
         """
         left_pairs = self._get_left_pairs()
         num_left_pairs = len(left_pairs)
@@ -133,7 +144,7 @@ def run(length, max_iter, params):
         eta = P_LINK * np.exp(-comm_distance / L_ATT)
         num_trials = np.random.geometric(eta)
         time_taken = num_trials * trial_time
-        return time_taken, num_trials
+        return time_taken
 
     def BSM_error_func(rho):
         return LAMBDA_BSM * rho + (1 - LAMBDA_BSM) * mat.I(4) / 4
@@ -168,9 +179,10 @@ def run(length, max_iter, params):
     protocol = SimpleProtocol(world=world, communication_speed=C)
     protocol.setup()
 
+    current_message = None
     while len(protocol.time_list) < max_iter:
-        protocol.check()
-        world.event_queue.resolve_next_event()
+        protocol.check(message=current_message)
+        current_message = world.event_queue.resolve_next_event()
     return protocol
 
 

@@ -250,7 +250,7 @@ class TestQuantumObjects(unittest.TestCase):
 
     def test_scheduling_source(self):
         def dummy_schedule(source):
-            return 5, 0
+            return 5
 
         def dummy_generation(source):
             return np.dot(mat.phiplus, mat.H(mat.phiplus))

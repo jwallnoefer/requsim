@@ -34,21 +34,11 @@ class Protocol(ABC):
         pass
 
     @abstractmethod
-    def check(self):
+    def check(self, message=None):
         """The main method of the protocol.
 
         Should analyze the current status of the world and event_queue to
         make decisions about next steps.
-        """
-        pass
-
-
-class MessageReadingProtocol(Protocol):
-    """Abstract Protocol that can use additional information."""
-
-    @abstractmethod
-    def check(self, message=None):
-        """Short summary.
 
         Parameters
         ----------
