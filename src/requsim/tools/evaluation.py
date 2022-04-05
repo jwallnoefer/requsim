@@ -34,7 +34,7 @@ def calculate_keyrate_time(
     else:
         keyrate_std = pair_per_time * np.sqrt(
             (-np.log2(e_x) + np.log2(1 - e_x)) ** 2 * np.std(correlations_x) ** 2
-            + err_corr_ineff ** 2
+            + err_corr_ineff**2
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
@@ -60,7 +60,7 @@ def calculate_keyrate_channel_use(
     else:
         keyrate_std = pair_per_resource * np.sqrt(
             (-np.log2(e_x) + np.log2(1 - e_x)) ** 2 * np.std(correlations_x) ** 2
-            + err_corr_ineff ** 2
+            + err_corr_ineff**2
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
