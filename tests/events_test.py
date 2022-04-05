@@ -65,8 +65,8 @@ def _known_dejmps_identical_copies(lambdas):
     # known formula for two identical states diagonal in the bell basis
     lambda_00, lambda_01, lambda_10, lambda_11 = lambdas
     new_lambdas = [
-        lambda_00 ** 2 + lambda_11 ** 2,
-        lambda_01 ** 2 + lambda_10 ** 2,
+        lambda_00**2 + lambda_11**2,
+        lambda_01**2 + lambda_10**2,
         2 * lambda_00 * lambda_11,
         2 * lambda_01 * lambda_10,
     ]

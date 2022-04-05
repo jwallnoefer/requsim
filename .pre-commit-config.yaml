@@ -33,7 +33,7 @@ repos:
       - id: python-no-eval
       - id: python-check-mock-methods
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 22.3.0
     hooks:
       - id: black
         name: Black formatter (you might have to git add files)

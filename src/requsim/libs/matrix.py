@@ -232,4 +232,4 @@ def ptrace(rho, sys):
     for i in sys:
         rho = np.trace(rho, axis1=i, axis2=i + n)
         n -= 1
-    return rho.reshape(2 ** n, 2 ** n)
+    return rho.reshape(2**n, 2**n)
