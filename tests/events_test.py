@@ -54,7 +54,7 @@ class DummyObject(WorldObject):
 
 
 def _random_test_state(n):
-    test_state = np.random.random((2 ** n, 2 ** n))
+    test_state = np.random.random((2**n, 2**n))
     test_state = test_state + test_state.T  # symmetrize
     # normalize, so we have random real density matrix
     test_state = test_state / np.trace(test_state)

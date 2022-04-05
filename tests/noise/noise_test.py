@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 
 def _random_n_qubit_state(n):
-    state = np.random.random((2 ** n, 2 ** n))
+    state = np.random.random((2**n, 2**n))
     state = (state + mat.H(state)) / 2  # symmetrize
     state = state / np.trace(state)  # normalize
     return state
