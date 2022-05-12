@@ -17,6 +17,7 @@ sphinx = "*"
 autodocsumm = "*"
 recommonmark = "*"
 sphinx-rtd-theme = "*"
+setuptools-scm = "*"
 
 [requires]
 python_version = "3.8"

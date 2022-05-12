@@ -31,7 +31,7 @@ def distance(pos1, pos2):
         if pos1.shape == pos2.shape:
             return np.sqrt(np.sum((pos1 - pos2) ** 2))
         else:
-            ValueError(
+            raise ValueError(
                 f"Can't calculate distance between positions with shape {pos1.shape} and {pos2.shape}"
             )
     else:
@@ -74,7 +74,7 @@ def apply_single_qubit_map(map_func, qubit_index, rho, *args, **kwargs):
             + idx[n - 1 + qubit_index :]
         )
         out[my_slice] = map_func(rho[my_slice], *args, **kwargs)
-    return np.real_if_close(out.reshape((2 ** n, 2 ** n)))
+    return np.real_if_close(out.reshape((2**n, 2**n)))
 
 
 def apply_m_qubit_map(map_func, qubit_indices, rho, *args, **kwargs):
@@ -107,7 +107,7 @@ def apply_m_qubit_map(map_func, qubit_indices, rho, *args, **kwargs):
     qubit_indices = sorted(qubit_indices)
     index_list = qubit_indices + [n + qubit_index for qubit_index in qubit_indices]
     # still not found a nicer way for the iteration here
-    out = np.zeros_like(rho)
+    out = np.zeros(rho.shape, dtype=complex)
     for idx in np.ndindex(*(2, 2) * (n - m)):
         my_slice = list(idx)
         for current_idx in index_list:
@@ -116,9 +116,9 @@ def apply_m_qubit_map(map_func, qubit_indices, rho, *args, **kwargs):
         # print(idx, n, m, qubit_indices, index_list)
         # print(my_slice)
         out[my_slice] = map_func(
-            rho[my_slice].reshape(2 ** m, 2 ** m), *args, **kwargs
+            rho[my_slice].reshape(2**m, 2**m), *args, **kwargs
         ).reshape((2, 2) * m)
-    return out.reshape((2 ** n, 2 ** n))
+    return out.reshape((2**n, 2**n))
 
 
 # def apply_m_qubit_map_alternate(map_func, qubit_indices, rho, *args, **kwargs):

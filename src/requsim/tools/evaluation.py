@@ -6,6 +6,19 @@ from warnings import warn
 
 
 def binary_entropy(p):
+    """Calculate the binary entropy.
+
+    Parameters
+    ----------
+    p : scalar
+        Must be in interval [0, 1]. Usually an error rate.
+
+    Returns
+    -------
+    scalar
+        The binary entropy of `p`.
+
+    """
     if p == 1 or p == 0:
         return 0
     else:
@@ -18,6 +31,43 @@ def binary_entropy(p):
 def calculate_keyrate_time(
     correlations_z, correlations_x, err_corr_ineff, time_interval, return_std=False
 ):
+    """Calculate the asymptotic key rate per time from a list of correlations.
+
+    This uses the sample mean of error rates to estimate what the asymptotic
+    key rate would be. It uses the formula for a bound on the asymptotic key
+    rate. See for this particular formulation:
+
+    D. Luong, L. Jiang, J. Kim, N. Lütkenhaus; Appl. Phys. B 122, 96 (2016)
+    arXiv:1508.02811 [quant-ph]
+
+    Optionally also returns the standard deviation of the key rate
+    calculated by using propagation of error.
+
+    Parameters
+    ----------
+    correlations_z : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in z-direction coincide for each raw bit.
+    correlations_x : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in x-direction coincide for each raw bit.
+    err_corr_ineff : scalar
+        The error correction inefficiency, which lowers the obtainable key rate.
+        1 means perfectly efficient; >1 indicates inefficiencies
+    time_interval : scalar
+        Time interval in which the raw bits were collected.
+    return_std : bool
+        Whether to also compute and return the standard deviation of the
+        key rate. Default: False
+
+    Returns
+    -------
+    scalar or tuple of scalars
+        If return_std is False, returns the key rate.
+        If return_std is True, returns at tuple of key rate and
+        standard deviation of the key rate.
+
+    """
     e_z = 1 - np.mean(correlations_z)
     e_x = 1 - np.mean(correlations_x)
     pair_per_time = len(correlations_z) / time_interval
@@ -34,7 +84,7 @@ def calculate_keyrate_time(
     else:
         keyrate_std = pair_per_time * np.sqrt(
             (-np.log2(e_x) + np.log2(1 - e_x)) ** 2 * np.std(correlations_x) ** 2
-            + err_corr_ineff ** 2
+            + err_corr_ineff**2
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
@@ -44,6 +94,51 @@ def calculate_keyrate_time(
 def calculate_keyrate_channel_use(
     correlations_z, correlations_x, err_corr_ineff, resource_list, return_std=False
 ):
+    """Calculate the asymptotic key rate per resource from a list of correlations.
+
+    CAREFUL: This formulation only makes sense when the amount of resources
+    (usually number of channel uses or similar) is directly assignable to one
+    particular pair or set of raw bits. This is often not the case e.g. if
+    connections are not established sequentially for each bit, as would be the
+    case for multi-mode memories.
+    This function uses the sample mean of error rates to estimate what the
+    asymptotic key rate would be.
+    It uses the formula for a bound on the asymptotic key
+    rate. See for this particular formulation:
+
+    D. Luong, L. Jiang, J. Kim, N. Lütkenhaus; Appl. Phys. B 122, 96 (2016)
+    arXiv:1508.02811 [quant-ph]
+
+    Optionally also returns the standard deviation of the key rate
+    calculated by using propagation of error.
+
+    Parameters
+    ----------
+    correlations_z : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in z-direction coincide for each raw bit.
+    correlations_x : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in x-direction coincide for each raw bit.
+    err_corr_ineff : scalar
+        The error correction inefficiency, which lowers the obtainable key rate.
+        1 means perfectly efficient; >1 indicates inefficiencies
+    resource_list : list of scalar
+        A list containing the number of resources each set of raw bits consumed.
+        This might not make sense if the number of consumed resources is not
+        directly assignable to one particular set of raw bits.
+    return_std : bool
+        Whether to also compute and return the standard deviation of the
+        key rate. Default: False
+
+    Returns
+    -------
+    scalar or tuple of scalars
+        If return_std is False, returns the key rate.
+        If return_std is True, returns at tuple of key rate and
+        standard deviation of the key rate.
+
+    """
     e_z = 1 - np.mean(correlations_z)
     e_x = 1 - np.mean(correlations_x)
     pair_per_resource = len(correlations_z) / np.sum(resource_list)
@@ -60,14 +155,95 @@ def calculate_keyrate_channel_use(
     else:
         keyrate_std = pair_per_resource * np.sqrt(
             (-np.log2(e_x) + np.log2(1 - e_x)) ** 2 * np.std(correlations_x) ** 2
-            + err_corr_ineff ** 2
+            + err_corr_ineff**2
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
     return keyrate, keyrate_std
 
 
+def calculate_keyrate_channel_use_from_time(
+    correlations_z,
+    correlations_x,
+    err_corr_ineff,
+    time_list,
+    trial_time,
+    return_std=False,
+):
+    """Calculate the asymptotic key rate per resource with only timing info.
+
+    In some setups the number of channel uses is directly tied to time.
+    CARFUL: This measure only makes sense if this is the case for the setup
+    you are analyzing.
+
+    This function calculates time intervals and resources from the `time_list`
+    and then passes them to calculate_keyrate_channel_use.
+
+    Parameters
+    ----------
+    correlations_z : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in z-direction coincide for each raw bit.
+    correlations_x : list of scalars
+        List of correlations. The entries should correspond to the probabilty
+        that measurement outcomes in x-direction coincide for each raw bit.
+    err_corr_ineff : scalar
+        The error correction inefficiency, which lowers the obtainable key rate.
+        1 means perfectly efficient; >1 indicates inefficiencies
+    time_list : list of scalar
+        A list containing the point in time that a each set of raw bits was
+        recorded. e.g. data["time"] from the data attribute of a
+        requsim.tools.TwoLinkProtocol
+        CAREFUL: This assumes that the protocol was started at time 0 and that
+        the communication time is half the trial time.
+    trial_time : scalar
+        The time one trial to establish a pair takes. Usually something like
+        preparation time + 2 * distance / communication speed.
+    return_std : bool
+        Whether to also compute and return the standard deviation of the
+        key rate. Default: False
+
+    Returns
+    -------
+    scalar or tuple of scalars
+        If return_std is False, returns the key rate.
+        If return_std is True, returns at tuple of key rate and
+        standard deviation of the key rate.
+
+    """
+    time_interval_list = np.diff(pd.concat([pd.Series([trial_time / 2]), time_list]))
+    resource_list = time_interval_list / trial_time
+    return calculate_keyrate_channel_use(
+        correlations_z=correlations_z,
+        correlations_x=correlations_x,
+        err_corr_ineff=err_corr_ineff,
+        resource_list=resource_list,
+        return_std=return_std,
+    )
+
+
 def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
+    """Calculate fidelities and key rates from times and states.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame
+        A pandas DataFrame with columns "time" and "state", representing
+        when each connection was made and the two-qubit state associated with
+        that connection.
+    err_corr_ineff : scalar
+        The error correction inefficiency, which lowers the obtainable key rate.
+        1 means perfectly efficient; >1 indicates inefficiencies. Default: 1
+
+    Returns
+    -------
+    list of scalars
+        contains: average fidelity,
+                  standard deviation of fidelity,
+                  average asymptotic key rate per time,
+                  standard deviatoin of key rate per time
+
+    """
     states = data_frame["state"]
 
     fidelity_list = np.real_if_close(
@@ -108,94 +284,9 @@ def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
         time_interval=data_frame["time"].iloc[-1],
         return_std=True,
     )
-    key_per_resource, key_per_resource_std = calculate_keyrate_channel_use(
-        correlations_z=correlations_z,
-        correlations_x=correlations_x,
-        err_corr_ineff=err_corr_ineff,
-        resource_list=data_frame["resource_cost_max"],
-        return_std=True,
-    )
     return [
         fidelity,
         fidelity_std,
         key_per_time,
         key_per_time_std,
-        key_per_resource,
-        key_per_resource_std,
     ]
-
-
-def save_result(data_series, output_path, mode="write"):
-    """Evaluate and save data in a standardized way.
-
-    Parameters
-    ----------
-    data_series : pandas.Series
-        A Series of pandas.DataFrame retrieved via protocol.data,
-        index should be the x-axis of the corresponding plot.
-    output_path : str
-        Results are written to this path..
-    mode : {"write", "w", "append", "a"}
-        If "write" or "w" overwrites existing results.
-        If "append" or "a" will look for existing results and append the results
-        if there are any.
-
-    Returns
-    -------
-    None
-
-    """
-    if mode in ["write", "w"]:
-        append_mode = False
-    elif mode in ["append", "a"]:
-        append_mode = True
-    else:
-        raise ValueError(
-            f"save_result does not support mode {mode}, please choose either 'write' or 'append'"
-        )
-    assert_dir(output_path)
-    result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
-    output_data = pd.DataFrame(
-        data=result_list,
-        index=data_series.index,
-        columns=[
-            "fidelity",
-            "fidelity_std",
-            "key_per_time",
-            "key_per_time_std",
-            "key_per_resource",
-            "key_per_resource_std",
-        ],
-    )
-    if append_mode:
-        try:
-            existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
-            data_series = existing_series.append(data_series)
-        except FileNotFoundError:
-            pass
-        try:
-            existing_data = pd.read_csv(
-                os.path.join(output_path, "result.csv"), index_col=0
-            )
-            output_data = pd.concat([existing_data, output_data])
-        except FileNotFoundError:
-            pass
-    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
-    output_data.to_csv(os.path.join(output_path, "result.csv"))
-
-
-def assert_dir(path):
-    """Check if `path` exists, and create it if it doesn't.
-
-    Parameters
-    ----------
-    path : str
-        The path to be checked/created.
-
-    Returns
-    -------
-    None
-
-    """
-    if not os.path.exists(path):
-        os.makedirs(path)

@@ -48,48 +48,20 @@ class Pair(WorldObject):
         world,
         qubits,
         initial_state,
-        initial_cost_add=None,
-        initial_cost_max=None,
         label=None,
     ):
         # maybe add a check that qubits are always in the same order?
         self.qubits = qubits
         self.state = initial_state
-        self.qubit1.pair = self
-        self.qubit2.pair = self
-        self.resource_cost_add = initial_cost_add
-        self.resource_cost_max = initial_cost_max
-        # if there are lingering resources trackings to be done, add them now
-        if self.resource_cost_add is not None or self.resource_cost_max is not None:
-            resources1 = self.qubit1.station.resource_tracking[self.qubit2.station]
-            resources2 = self.qubit2.station.resource_tracking[self.qubit1.station]
-            assert resources1 == resources2
-            if self.resource_cost_add is not None:
-                self.resource_cost_add += resources1["resource_cost_add"]
-                # then reset count
-                resources1[
-                    "resource_cost_add"
-                ] = 0  # changing the mutable object will also change it in the real tracking dictionary
-                resources2["resource_cost_add"] = 0
-            if self.resource_cost_max is not None:
-                self.resource_cost_max += resources1["resource_cost_max"]
-                # then reset count
-                resources1[
-                    "resource_cost_max"
-                ] = 0  # changing the mutable object will also change it in the real tracking dictionary
-                resources2["resource_cost_max"] = 0
-        # apply unresolved channels of the qubits
-        if self.qubit1.unresolved_noise is not None:
-            self.state = self.qubit1.unresolved_noise.apply_to(
-                rho=self.state, qubit_indices=[0]
-            )
-            self.qubit1.unresolved_noise = None
-        if self.qubit2.unresolved_noise is not None:
-            self.state = self.qubit2.unresolved_noise.apply_to(
-                rho=self.state, qubit_indices=[1]
-            )
-            self.qubit2.unresolved_noise = None
-
+        self.qubit1.update_info({"pair": self})
+        self.qubit1.higher_order_object = self
+        self.qubit1.add_destroy_callback(self._on_qubit_destroy)
+        self.qubit2.update_info({"pair": self})
+        self.qubit2.higher_order_object = self
+        self.qubit2.add_destroy_callback(self._on_qubit_destroy)
+        # add self as noise handler for its qubits
+        self.qubit1.add_noise_handler(self._qubit1_noise_handler)
+        self.qubit2.add_noise_handler(self._qubit2_noise_handler)
         super(Pair, self).__init__(world=world, label=label)
 
     def __str__(self):
@@ -98,7 +70,12 @@ class Pair(WorldObject):
             + ", ".join([x.label for x in self.qubits])
             + " between stations "
             + ", ".join(
-                [x.station.label if x.station else str(x.station) for x in self.qubits]
+                [
+                    x._info["station"].label
+                    if x._info["station"]
+                    else str(x._info["station"])
+                    for x in self.qubits
+                ]
             )
             + "."
         )
@@ -140,39 +117,50 @@ class Pair(WorldObject):
     def qubit2(self, qubit):
         self.qubits[1] = qubit
 
+    def _qubit1_noise_handler(self, noise_channel, *args, **kwargs):
+        self.state = noise_channel.apply_to(
+            rho=self.state, qubit_indices=[0], *args, **kwargs
+        )
+        handling_successful = True
+        return handling_successful
+
+    def _qubit2_noise_handler(self, noise_channel, *args, **kwargs):
+        self.state = noise_channel.apply_to(
+            rho=self.state, qubit_indices=[1], *args, **kwargs
+        )
+        handling_successful = True
+        return handling_successful
+
+    def _on_qubit_destroy(self, qubit):
+        if qubit in self.qubits:
+            self.destroy()
+
     def is_between_stations(self, station1, station2):
-        return (
-            self.qubit1.station == station1 and self.qubit2.station == station2
-        ) or (self.qubit1.station == station2 and self.qubit2.station == station1)
+        """Check whether qubits are at specified stations.
+
+        Parameters
+        ----------
+        station1 : Station
+        station2 : Station
+
+        Returns
+        -------
+        bool
+            True if pair is between station1 and station2, False otherwise.
+
+        """
+        return (self.qubit1 in station1.qubits and self.qubit2 in station2.qubits) or (
+            self.qubit1 in station2.qubits and self.qubit2 in station1.qubits
+        )
 
     def _on_update_time(self):
-        time_interval = self.event_queue.current_time - self.last_updated
-        map0 = self.qubits[0].station.memory_noise
-        if map0 is not None:
-            self.state = apply_single_qubit_map(
-                map_func=map0, qubit_index=0, rho=self.state, t=time_interval
-            )
-        map1 = self.qubits[1].station.memory_noise
-        if map1 is not None:
-            self.state = apply_single_qubit_map(
-                map_func=map1, qubit_index=1, rho=self.state, t=time_interval
-            )
+        self.qubit1.update_time()
+        self.qubit2.update_time()
 
-    def destroy_and_track_resources(self):
-        station1 = self.qubits[0].station
-        station2 = self.qubits[1].station
-        if self.resource_cost_add is not None:
-            station1.resource_tracking[station2][
-                "resource_cost_add"
-            ] += self.resource_cost_add
-            station2.resource_tracking[station1][
-                "resource_cost_add"
-            ] += self.resource_cost_add
-        if self.resource_cost_max is not None:
-            station1.resource_tracking[station2][
-                "resource_cost_max"
-            ] += self.resource_cost_max
-            station2.resource_tracking[station1][
-                "resource_cost_max"
-            ] += self.resource_cost_max
-        self.destroy()
+    def destroy(self):
+        # remove self as noise handler for its qubits
+        if self.qubit1 in self.world:
+            self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
+        if self.qubit2 in self.world:
+            self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
+        super(Pair, self).destroy()

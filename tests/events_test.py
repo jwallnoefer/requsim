@@ -13,12 +13,20 @@ from requsim.events import (
 from requsim.quantum_objects import Qubit, Pair, Station, Source, WorldObject
 import numpy as np
 import requsim.libs.matrix as mat
+from requsim.libs.aux_functions import distance
+
+_COMMUNICATION_SPEED = 2e8
 
 
 class DummyEvent(Event):
-    def __init__(self, time, required_objects=[], ignore_blocked=False):
+    def __init__(
+        self, time, required_objects=[], ignore_blocked=False, callback_functions=[]
+    ):
         super(DummyEvent, self).__init__(
-            time, required_objects=required_objects, ignore_blocked=ignore_blocked
+            time,
+            required_objects=required_objects,
+            ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
@@ -45,12 +53,20 @@ class DummyObject(WorldObject):
     pass
 
 
+def _random_test_state(n):
+    test_state = np.random.random((2**n, 2**n))
+    test_state = test_state + test_state.T  # symmetrize
+    # normalize, so we have random real density matrix
+    test_state = test_state / np.trace(test_state)
+    return test_state
+
+
 def _known_dejmps_identical_copies(lambdas):
     # known formula for two identical states diagonal in the bell basis
     lambda_00, lambda_01, lambda_10, lambda_11 = lambdas
     new_lambdas = [
-        lambda_00 ** 2 + lambda_11 ** 2,
-        lambda_01 ** 2 + lambda_10 ** 2,
+        lambda_00**2 + lambda_11**2,
+        lambda_01**2 + lambda_10**2,
         2 * lambda_00 * lambda_11,
         2 * lambda_01 * lambda_10,
     ]
@@ -74,31 +90,76 @@ class TestEvents(unittest.TestCase):
     def _aux_general_test(self, event):
         self.assertIsInstance(event, Event)
 
-    def test_dummy_event(self):  # basically just tests the tracking of required objects
-        test_objects = [DummyObject(world=self.world) for i in range(20)]
-        event = DummyEvent(time=0, required_objects=test_objects)
+    def _check_event_return_is_valid(self, return_value):
+        if return_value is None:
+            return True
+        elif isinstance(return_value, dict):
+            self.assertIn("resolve_successful", return_value)
+            self.assertIsInstance(return_value["resolve_successful"], bool)
+            self.assertIn("event_type", return_value)
+            self.assertIsInstance(return_value["event_type"], str)
+            return True
+        else:
+            return False
+
+    def _aux_test_event_with_callback(self, EventClass, should_require=[], **kwargs):
+        kwargs = dict(kwargs)
+        mock_init_callback = MagicMock()
+        if "callback_functions" in kwargs:
+            kwargs["callback_functions"] += [mock_init_callback]
+        else:
+            kwargs["callback_functions"] = [mock_init_callback]
+        event = EventClass(**kwargs)
         self._aux_general_test(event)
-        for obj in test_objects:
+        mock_added_callback = MagicMock()
+        event.add_callback(mock_added_callback)
+        # explicitly required objects should be required
+        if "required_objects" in kwargs:
+            for obj in kwargs["required_objects"]:
+                self.assertIn(obj, event.required_objects)
+                self.assertIn(event, obj.required_by_events)
+        # check if event-specific objects that should be (maybe implicitly)
+        # required, are indeed required
+        for obj in should_require:
             self.assertIn(obj, event.required_objects)
+        # implicitly required objects should know of the event
+        for obj in event.required_objects:
             self.assertIn(event, obj.required_by_events)
         self.world.event_queue.add_event(event)
-        self.world.event_queue.resolve_next_event()
-        for obj in test_objects:
+        mock_init_callback.assert_not_called()
+        mock_added_callback.assert_not_called()
+        return_value = self.world.event_queue.resolve_next_event()
+        if "required_objects" in kwargs:
+            for obj in kwargs["required_objects"]:
+                self.assertNotIn(event, obj.required_by_events)
+        # sometimes events do only implicitly specify the required objects
+        for obj in event.required_objects:
             self.assertNotIn(event, obj.required_by_events)
+        mock_init_callback.assert_called_once()
+        mock_added_callback.assert_called_once()
+        self.assertTrue(self._check_event_return_is_valid(return_value))
+
+    def test_dummy_event(self):  # basically just tests the tracking of required objects
+        test_objects = [DummyObject(world=self.world) for i in range(20)]
+        self._aux_test_event_with_callback(
+            DummyEvent, time=0, required_objects=test_objects
+        )
 
     def test_source_event(self):
         test_station = Station(world=self.world, position=0)
         test_source = Source(
             world=self.world, position=0, target_stations=[test_station, test_station]
         )
-        event = SourceEvent(time=0, source=test_source, initial_state=MagicMock())
-        self._aux_general_test(event)
-        self.assertIn(event, test_station.required_by_events)
-        self.assertIn(event, test_source.required_by_events)
-        self.world.event_queue.add_event(event)
-        self.world.event_queue.resolve_next_event()
-        self.assertNotIn(event, test_station.required_by_events)
-        self.assertNotIn(event, test_source.required_by_events)
+        should_require = [test_source, test_station]
+        self._aux_test_event_with_callback(
+            SourceEvent,
+            should_require=should_require,
+            time=0,
+            source=test_source,
+            initial_state=MagicMock(),
+        )
+        # is there a pair after the source event?
+        self.assertEqual(len(self.world.world_objects["Pair"]), 1)
 
     def test_entanglement_swapping_event(self):
         left_station = Station(world=self.world, position=0)
@@ -114,31 +175,35 @@ class TestEvents(unittest.TestCase):
             qubits=[middle_station.create_qubit(), right_station.create_qubit()],
             initial_state=np.dot(mat.phiplus, mat.H(mat.phiplus)),
         )
-        event = EntanglementSwappingEvent(time=0, pairs=[pair1, pair2])
-        self._aux_general_test(event)
-        self.assertIn(event, pair1.required_by_events)
-        self.assertIn(event, pair2.required_by_events)
-        required_qubits = [qubit for pair in [pair1, pair2] for qubit in pair.qubits]
-        for qubit in required_qubits:
-            self.assertIn(event, qubit.required_by_events)
-        self.world.event_queue.add_event(event)
-        self.world.event_queue.resolve_next_event()
-        self.assertNotIn(event, pair1.required_by_events)
-        self.assertNotIn(event, pair2.required_by_events)
-        for qubit in required_qubits:
-            self.assertNotIn(event, qubit.required_by_events)
+        should_require = [pair1, pair2] + [
+            qubit for pair in [pair1, pair2] for qubit in pair.qubits
+        ]
+        self._aux_test_event_with_callback(
+            EntanglementSwappingEvent,
+            should_require=should_require,
+            time=0,
+            pairs=[pair1, pair2],
+            station=middle_station,
+        )
+        # functionality test is missing
 
     def test_discard_qubit_event(self):
-        world = World()
-        qubit = Qubit(world=world, station=MagicMock())
-        event = DiscardQubitEvent(time=0, qubit=qubit)
-        self._aux_general_test(event)
+        world = self.world
+        # general test
+        qubit = Qubit(world=world)
+        self._aux_test_event_with_callback(
+            DiscardQubitEvent, should_require=[qubit], time=0, qubit=qubit
+        )
         # now test whether qubit actually gets discarded
+        qubit = Qubit(world=world)
+        event = DiscardQubitEvent(time=0, qubit=qubit)
         self.assertIn(qubit, world.world_objects[qubit.type])
+        self.assertIn(qubit, world)
         event.resolve()
         self.assertNotIn(qubit, world.world_objects[qubit.type])
+        self.assertNotIn(qubit, world)
         # now test whether the whole pair gets discarded if a qubit is discarded
-        qubits = [Qubit(world=world, station=MagicMock()) for i in range(2)]
+        qubits = [Qubit(world=world) for i in range(2)]
         pair = Pair(world=world, qubits=qubits, initial_state=MagicMock())
         event = DiscardQubitEvent(time=0, qubit=qubits[0])
         self.assertIn(qubits[0], world.world_objects[qubits[0].type])
@@ -150,22 +215,53 @@ class TestEvents(unittest.TestCase):
         self.assertNotIn(pair, world.world_objects[pair.type])
 
     def test_unblock_event(self):
+        # general test
+        test_object = WorldObject(world=self.world)
+        test_object.is_blocked = True
+        self._aux_test_event_with_callback(
+            UnblockEvent,
+            should_require=[test_object],
+            time=0,
+            quantum_objects=[test_object],
+        )
+        # test for functionality
         test_object = WorldObject(world=self.world)
         test_object.is_blocked = True
         event = UnblockEvent(time=0, quantum_objects=[test_object])
-        self._aux_general_test(event)
         self.world.event_queue.add_event(event)
         self.assertIs(test_object.is_blocked, True)
         self.world.event_queue.resolve_next_event()
         self.assertIs(test_object.is_blocked, False)
+
+    def test_epp_general(self):  # more involved functionality test below
+        station1 = Station(world=self.world, position=0)
+        station2 = Station(world=self.world, position=100)
+        pair1 = Pair(
+            world=self.world,
+            qubits=[station1.create_qubit(), station2.create_qubit()],
+            initial_state=_random_test_state(n=2),
+        )
+        pair2 = Pair(
+            world=self.world,
+            qubits=[station1.create_qubit(), station2.create_qubit()],
+            initial_state=_random_test_state(n=2),
+        )
+        should_require = [pair1, pair2] + pair1.qubits + pair2.qubits
+        self._aux_test_event_with_callback(
+            EntanglementPurificationEvent,
+            should_require=should_require,
+            time=0,
+            pairs=[pair1, pair2],
+            communication_time=5,
+        )
 
 
 class TestEPP(unittest.TestCase):
     # entanglement purification gets own test case because there is more to test
     def setUp(self):
         self.world = World()
-        self.station1 = Station(world=self.world, id=1, position=0)
-        self.station2 = Station(world=self.world, id=2, position=100)
+        self.station1 = Station(world=self.world, position=0)
+        self.station2 = Station(world=self.world, position=100)
 
     # #  first we test the built_in epp modes
     def test_dejmps_epp_event(self):
@@ -204,11 +300,13 @@ class TestEPP(unittest.TestCase):
                 event = EntanglementPurificationEvent(
                     time=self.world.event_queue.current_time,
                     pairs=[pair1, pair2],
+                    communication_time=distance(self.station1, self.station2)
+                    / _COMMUNICATION_SPEED,
                     protocol="dejmps",
                 )
                 self.world.event_queue.add_event(event)
                 self.world.event_queue.resolve_next_event()  # resolve event
-                self.world.event_queue.resolve_next_event()  # resole unblocking/discarding generated by the event
+                self.world.event_queue.resolve_next_event()  # resolve unblocking/discarding generated by the event
             self.assertEqual(len(self.world.world_objects["Pair"]), 1)
             pair = self.world.world_objects["Pair"][0]
             self.assertTrue(np.allclose(pair.state, trusted_state))
@@ -226,9 +324,11 @@ class TestEPP(unittest.TestCase):
             qubits=[self.station1.create_qubit(), self.station2.create_qubit()],
             initial_state=np.dot(mat.psiplus, mat.H(mat.psiplus)),
         )
-        event = event = EntanglementPurificationEvent(
+        event = EntanglementPurificationEvent(
             time=self.world.event_queue.current_time,
             pairs=[pair1, pair2],
+            communication_time=distance(self.station1, self.station2)
+            / _COMMUNICATION_SPEED,
             protocol=_bogus_epp,
         )
         self.world.event_queue.add_event(event)
@@ -335,7 +435,7 @@ class TestPrioritySystem(unittest.TestCase):
 
     def test_reasonable_priorities(self):
         test_time = np.random.random() * 20
-        test_qubit = Qubit(world=self.world, station=MagicMock())
+        test_qubit = Qubit(world=self.world)
         discard_qubit_event = DiscardQubitEvent(time=test_time, qubit=test_qubit)
         normal_event = DummyEvent(time=test_time)
         unblock_event = UnblockEvent(time=test_time, quantum_objects=[test_qubit])

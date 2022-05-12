@@ -45,9 +45,7 @@ class Source(WorldObject):
     def type(self):
         return "Source"
 
-    def generate_pair(
-        self, initial_state, initial_cost_add=None, initial_cost_max=None
-    ):
+    def generate_pair(self, initial_state):
         """Generate an entangled pair.
 
         The Pair will be generated in the `initial_state` at the
@@ -70,11 +68,7 @@ class Source(WorldObject):
         qubit1 = station1.create_qubit()
         qubit2 = station2.create_qubit()
         return Pair(
-            world=self.world,
-            qubits=[qubit1, qubit2],
-            initial_state=initial_state,
-            initial_cost_add=initial_cost_add,
-            initial_cost_max=initial_cost_max,
+            world=self.world, qubits=[qubit1, qubit2], initial_state=initial_state
         )
 
 
@@ -110,7 +104,18 @@ class SchedulingSource(Source):
         super(SchedulingSource, self).__init__(world, position, target_stations, label)
 
     def schedule_event(self):
-        time_delay, times_tried = self.time_distribution(source=self)
+        """Schedule a SourceEvent according to the specified rules.
+
+        Will generate a pair after a time detemined by `time_distribution`
+        and in a state specified by `state_generation`.
+
+        Returns
+        -------
+        SourceEvent
+            The event that was scheduled by this.
+
+        """
+        time_delay = self.time_distribution(source=self)
         scheduled_time = self.event_queue.current_time + time_delay
         initial_state = self.state_generation(
             source=self
@@ -119,8 +124,6 @@ class SchedulingSource(Source):
             time=scheduled_time,
             source=self,
             initial_state=initial_state,
-            initial_cost_add=times_tried,
-            initial_cost_max=times_tried,
         )
         self.event_queue.add_event(source_event)
         return source_event

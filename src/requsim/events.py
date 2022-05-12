@@ -1,5 +1,3 @@
-import sys
-import abc
 from abc import ABC, abstractmethod
 from .libs import matrix as mat
 from .libs.epp import dejmps_protocol
@@ -18,14 +16,18 @@ class Event(ABC):
     ----------
     time : scalar
         The time at which the event will be resolved.
-    required_objects : list of QuantumObjects
+    required_objects : list of QuantumObjects, or None
         Event will only resolve if all of these still exist at `time`.
-        Default: []
+        Default: None
     priority : int (expected 0...39)
         prioritize events that happen at the same time according to this
         (lower number means being resolved first) Default: 20
     ignore_blocked : bool
         Whether the event should act even on blocked objects. Default: False
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -43,13 +45,16 @@ class Event(ABC):
     def __init__(
         self,
         time,
-        required_objects=[],
+        required_objects=None,
         priority=20,
         ignore_blocked=False,
+        callback_functions=None,
         *args,
         **kwargs,
     ):
         self.time = time
+        if required_objects is None:
+            required_objects = []
         self.required_objects = required_objects
         for required_object in self.required_objects:
             assert required_object in required_object.world
@@ -58,6 +63,9 @@ class Event(ABC):
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
         self._return_dict = {"event_type": self.type, "resolve_successful": True}
+        if callback_functions is None:
+            callback_functions = []
+        self._callback_functions = callback_functions
 
     @abstractmethod
     def __repr__(self):
@@ -130,7 +138,29 @@ class Event(ABC):
         else:
             self._return_dict.update({"resolve_successful": False})
         self._deregister_from_objects()
+        # callbacks after resolving
+        for callback_func in self._callback_functions:
+            callback_func(self._return_dict)
         return self._return_dict
+
+    def add_callback(self, callback_func):
+        """Add a callback to this event.
+
+        Multiple callbacks added this way will resolve in the order they were
+        added.
+
+        Parameters
+        ----------
+        callback_func : callable
+            This function will be called with the `_return_dict` as an argument
+            after the event is resolved.
+
+        Returns
+        -------
+        None
+
+        """
+        self._callback_functions += [callback_func]
 
 
 class GenericEvent(Event):
@@ -144,12 +174,16 @@ class GenericEvent(Event):
         Function that will be called when the resolve method is called.
     *args : any
         args for resolve_function.
-    required_objects : list of QuantumObjects
-        Keyword only argument. Default: []
+    required_objects : list of QuantumObjects, or None
+        Keyword only argument. Default: None
     priority : int
         Keyword only argument. Default: 20
     ignore_blocked: bool
         Keyword only argument. Default: False
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
     **kwargs : any
         kwargs for resolve_function.
 
@@ -160,9 +194,10 @@ class GenericEvent(Event):
         time,
         resolve_function,
         *args,
-        required_objects=[],
+        required_objects=None,
         priority=20,
         ignore_blocked=False,
+        callback_functions=None,
         **kwargs,
     ):
         self._resolve_function = resolve_function
@@ -173,17 +208,16 @@ class GenericEvent(Event):
             required_objects=required_objects,
             priority=priority,
             ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time="
-            + str(self.time)
-            + ", resolve_function="
-            + str(self._resolve_function)
-            + ", "
+            + f"(time={self.time}, resolve_function={self._resolve_function},"
             + ", ".join(map(str, self._resolve_function_args))
+            + f"required_objects={self.required_objects}, priority={self.priority}, ignore_blocked={self.ignore_blocked}, "
+            + f"callback_functions={self._callback_functions}, "
             + ", ".join(
                 [
                     "{}={}".format(str(k), str(v))
@@ -210,6 +244,10 @@ class SourceEvent(Event):
         The source object generating the entangled pair.
     initial_state : np.ndarray
         Density matrix of the two qubit system being generated.
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
     *args, **kwargs :
         additional optional args and kwargs to pass to the the
         generate_pair method of `source`
@@ -223,21 +261,32 @@ class SourceEvent(Event):
 
     """
 
-    def __init__(self, time, source, initial_state, *args, **kwargs):
+    def __init__(
+        self, time, source, initial_state, callback_functions=None, *args, **kwargs
+    ):
         self.source = source
         self.initial_state = initial_state
         self.generation_args = args
         self.generation_kwargs = kwargs
         super(SourceEvent, self).__init__(
-            time=time, required_objects=[self.source, *self.source.target_stations]
+            time=time,
+            required_objects=[self.source, *self.source.target_stations],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time={}, source={}, initial_state={})".format(
-                str(self.time), str(self.source), repr(self.initial_state)
+            + f"(time={self.time}, source={self.source}, initial_state={self.initial_state}, "
+            + f"callback_functions={self._callback_functions}, "
+            + ", ".join(map(str, self.generation_args))
+            + ", ".join(
+                [
+                    "{}={}".format(str(k), str(v))
+                    for k, v in self.generation_kwargs.items()
+                ]
             )
+            + ")"
         )
 
     def __str__(self):
@@ -254,13 +303,14 @@ class SourceEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
-        # print("A source event happened at time", self.time, "while queue looked like this:", self.event_queue.queue)
-        self.source.generate_pair(
+        new_pair = self.source.generate_pair(
             self.initial_state, *self.generation_args, **self.generation_kwargs
         )
+        return {"source": self.source, "output_pair": new_pair}
 
 
 class EntanglementSwappingEvent(Event):
@@ -272,29 +322,35 @@ class EntanglementSwappingEvent(Event):
         Time at which the event will be resolved.
     pairs : list of Pairs
         The left pair and the right pair.
-    error_func : callable or None [Deprecated, use station.BSM_noise_model instead.]
-        A four-qubit map. Careful: This overwrites any noise behavior set by
-        station. Default: None
+    station : Station
+        The station where the entanglement swapping is performed.
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
     pairs
-    error_func
+    station
 
     """
 
-    def __init__(self, time, pairs, error_func=None):
+    def __init__(self, time, pairs, station, callback_functions=None):
         self.pairs = pairs
-        self.error_func = error_func  # currently a four-qubit channel, would be nicer as two-qubit channel that gets applied to the right qubits
+        self.station = station
         super(EntanglementSwappingEvent, self).__init__(
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, pairs={}, error_func={})".format(
-            str(self.time), str(self.pairs), repr(self.error_func)
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, pairs={self.pairs}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -312,23 +368,48 @@ class EntanglementSwappingEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
-        # it would be nice if this could handle arbitrary configurations
-        # instead of relying on strict indexes of left and right pairs
-        left_pair = self.pairs[0]
-        right_pair = self.pairs[1]
-        assert left_pair.qubits[1].station is right_pair.qubits[0].station
-        swapping_station = left_pair.qubits[1].station
-        left_pair.update_time()
-        right_pair.update_time()
-        four_qubit_state = mat.tensor(left_pair.state, right_pair.state)
+        pair1, pair2 = self.pairs
+        # find qubits at swapping station
+        swapping_qubits = []
+        swapping_indices = []
+        leftover_qubits = []
+        leftover_indices = []
+        for idx, qubit in enumerate(pair1.qubits):
+            if qubit in self.station.qubits:
+                swapping_qubits += [qubit]
+                swapping_indices += [idx]
+            else:
+                leftover_qubits += [qubit]
+                leftover_indices += [idx]
+        assert len(swapping_qubits) == 1
+        for idx, qubit in enumerate(pair2.qubits):
+            if qubit in self.station.qubits:
+                swapping_qubits += [qubit]
+                swapping_indices += [idx + 2]
+            else:
+                leftover_qubits += [qubit]
+                leftover_indices += [idx + 2]
+        assert len(swapping_qubits) == 2
+        pair1.update_time()
+        pair2.update_time()
+        four_qubit_state = mat.tensor(pair1.state, pair2.state)
+        four_qubit_state = mat.reorder(
+            rho=four_qubit_state,
+            sys=[
+                leftover_indices[0],
+                swapping_indices[0],
+                swapping_indices[1],
+                leftover_indices[1],
+            ],
+        )
+        noise_model = self.station.BSM_noise_model
         # non-ideal-bell-measurement
-        if self.error_func is not None:
-            four_qubit_state = self.error_func(four_qubit_state)
-        elif swapping_station.BSM_noise_model.channel_before is not None:
-            noise_channel = swapping_station.BSM_noise_model.channel_before
+        if noise_model.channel_before is not None:
+            noise_channel = noise_model.channel_before
             if noise_channel.n_qubits == 4:
                 four_qubit_state = noise_channel(four_qubit_state)
             elif noise_channel.n_qubits == 2:
@@ -341,48 +422,28 @@ class EntanglementSwappingEvent(Event):
                     + str(noise_channel)
                     + " is not supported by Bell State Measurement. Expects a 2- or 4-qubit channel."
                 )
-        if swapping_station.BSM_noise_model.map_replace is not None:
-            two_qubit_state = swapping_station.BSM_noise_model.map_replace(
-                four_qubit_state
-            )
+        if noise_model.map_replace is not None:
+            two_qubit_state = noise_model.map_replace(four_qubit_state)
         else:  # do the main thing
             my_proj = mat.tensor(mat.I(2), mat.phiplus, mat.I(2))
             two_qubit_state = np.dot(np.dot(mat.H(my_proj), four_qubit_state), my_proj)
             two_qubit_state = two_qubit_state / np.trace(two_qubit_state)
-        if (
-            swapping_station.BSM_noise_model.channel_after is not None
-        ):  # not sure this even makes sense in this context because qubits at station are expected to be gone
-            noise_channel = swapping_station.BSM_noise_model.channel_after
+        if noise_model.channel_after is not None:
+            # not sure this even makes sense in this context because qubits at station are expected to be gone
+            noise_channel = noise_model.channel_after
             assert noise_channel.n_qubits == 2
             two_qubit_state = noise_channel(two_qubit_state)
-        if (
-            left_pair.resource_cost_add is not None
-            and right_pair.resource_cost_add is not None
-        ):
-            new_cost_add = left_pair.resource_cost_add + right_pair.resource_cost_add
-        else:
-            new_cost_add = None
-        if (
-            left_pair.resource_cost_max is not None
-            and right_pair.resource_cost_max is not None
-        ):
-            new_cost_max = max(
-                left_pair.resource_cost_max, right_pair.resource_cost_max
-            )
-        else:
-            new_cost_max = None
         new_pair = quantum_objects.Pair(
-            world=left_pair.world,
-            qubits=[left_pair.qubits[0], right_pair.qubits[1]],
+            world=pair1.world,
+            qubits=leftover_qubits,
             initial_state=two_qubit_state,
-            initial_cost_add=new_cost_add,
-            initial_cost_max=new_cost_max,
         )
         # cleanup
-        left_pair.qubits[1].destroy()
-        right_pair.qubits[0].destroy()
-        left_pair.destroy()
-        right_pair.destroy()
+        for qubit in swapping_qubits:
+            qubit.destroy()
+        pair1.destroy()
+        pair2.destroy()
+        return {"output_pair": new_pair}
 
 
 class DiscardQubitEvent(Event):
@@ -400,6 +461,10 @@ class DiscardQubitEvent(Event):
         Default: 39 (because discard events should get processed last)
     ignore_blocked : bool
         Whether the event should act on blocked quantum objects. Default: True
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -407,18 +472,23 @@ class DiscardQubitEvent(Event):
 
     """
 
-    def __init__(self, time, qubit, priority=39, ignore_blocked=True):
+    def __init__(
+        self, time, qubit, priority=39, ignore_blocked=True, callback_functions=None
+    ):
         self.qubit = qubit
         super(DiscardQubitEvent, self).__init__(
             time=time,
             required_objects=[self.qubit],
             priority=priority,
-            ignore_blocked=True,
+            ignore_blocked=ignore_blocked,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, qubit={})".format(
-            str(self.time), str(self.qubit)
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, qubit={self.qubit}, priority={self.priority}, ignore_blocked={self.ignore_blocked}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -429,16 +499,18 @@ class DiscardQubitEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
-        if self.qubit.pair is not None:
-            self.qubit.pair.destroy_and_track_resources()
-            self.qubit.pair.qubits[0].destroy()
-            self.qubit.pair.qubits[1].destroy()
+        qubit_pair = self.qubit.higher_order_object
+        if qubit_pair is not None:
+            for qubit in qubit_pair.qubits:
+                qubit.destroy()
+            qubit_pair.destroy()
         else:
             self.qubit.destroy()
-            # print("A Discard Event happened with eventqueue:", self.qubit.world.event_queue.queue)
+        return {}
 
 
 class EntanglementPurificationEvent(Event):
@@ -449,26 +521,37 @@ class EntanglementPurificationEvent(Event):
     time : scalar
         Time at which the event will be resolved.
     pairs : list of Pairs
-        The pairs involved in the entanglement purification protocol.
+        The pairs involved in the entanglement purification protocol. Make
+        sure these are at the correct stations and have the same qubit ordering.
+    communication_time : scalar
+        how long it takes for the result of the protocol to be communcated
+        the remaining pair will be blocked for that amount of time
     protocol : {"dejmps"} or callable
         Can be one of the pre-installed or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
-    communication_speed : scalar
-        speed at which the classical information travels
-        Default: 2*10^8 (speed of light in optical fibre)
-
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
     pairs
     protocol
-    communication_speed
+    communication_time
 
     """
 
-    def __init__(self, time, pairs, protocol="dejmps", communication_speed=2e8):
+    def __init__(
+        self,
+        time,
+        pairs,
+        communication_time,
+        protocol="dejmps",
+        callback_functions=None,
+    ):
         self.pairs = pairs
         if protocol == "dejmps":
             self.protocol = dejmps_protocol
@@ -479,16 +562,20 @@ class EntanglementPurificationEvent(Event):
                 "EntanglementPurificationEvent got a protocol type that is not supported: "
                 + repr(protocol)
             )
-        self.communication_speed = communication_speed
+        self.communication_time = communication_time
         super(EntanglementPurificationEvent, self).__init__(
             time=time,
             required_objects=self.pairs
             + [qubit for pair in self.pairs for qubit in pair.qubits],
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
-        return self.__class__.__name__ + "(time={}, pairs={}, protocol={})".format(
-            repr(self.time), repr(self.pairs), repr(self.protocol)
+        return (
+            self.__class__.__name__
+            + f"(time={self.time}, pairs={self.pairs}, protocol={self.protocol}, "
+            + f"communication_speed={self.communication_speed}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
@@ -503,7 +590,8 @@ class EntanglementPurificationEvent(Event):
 
         Returns
         -------
-        None
+        dict
+            The return_dict of this event is updated with this.
 
         """
         # probably could use a check that pairs are between same stations?
@@ -513,14 +601,6 @@ class EntanglementPurificationEvent(Event):
         p_suc, state = self.protocol(rho)
         output_pair = self.pairs[0]
         output_pair.state = state
-        if output_pair.resource_cost_add is not None:
-            output_pair.resource_cost_add = np.sum(
-                [pair.resource_cost_add for pair in self.pairs]
-            )
-        if output_pair.resource_cost_max is not None:
-            output_pair.resource_cost_max = np.sum(
-                [pair.resource_cost_max for pair in self.pairs]
-            )
         output_pair.is_blocked = True
         output_pair.qubit1.is_blocked = True
         output_pair.qubit2.is_blocked = True
@@ -528,16 +608,9 @@ class EntanglementPurificationEvent(Event):
             pair.qubits[0].destroy()
             pair.qubits[1].destroy()
             pair.destroy()
-        communication_time = (
-            np.abs(
-                output_pair.qubit2.station.position
-                - output_pair.qubit1.station.position
-            )
-            / self.communication_speed
-        )
         if np.random.random() <= p_suc:  # if successful
             unblock_event = UnblockEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 quantum_objects=[output_pair, output_pair.qubit1, output_pair.qubit2],
             )
             self.event_queue.add_event(unblock_event)
@@ -545,12 +618,12 @@ class EntanglementPurificationEvent(Event):
         else:  # if unsuccessful
 
             def destroy_function():
-                output_pair.destroy_and_track_resources()
+                output_pair.destroy()
                 output_pair.qubits[0].destroy()
                 output_pair.qubits[1].destroy()
 
             destroy_event = GenericEvent(
-                time=self.time + communication_time,
+                time=self.time + self.communication_time,
                 resolve_function=destroy_function,
                 required_objects=[output_pair],
                 priority=0,
@@ -575,6 +648,10 @@ class UnblockEvent(Event):
         The quantum objects to be unblocked.
     priority : int (expected 0...39)
         Default: 0 (because unblocking should happen as soon as possible)
+    callback_functions : list of callables, or None
+        these will be called in order, after the event has been resolved.
+        Callbacks can also be added with the add_callback method.
+        Default: None
 
     Attributes
     ----------
@@ -582,21 +659,21 @@ class UnblockEvent(Event):
 
     """
 
-    def __init__(self, time, quantum_objects, priority=0):
+    def __init__(self, time, quantum_objects, priority=0, callback_functions=None):
         self.quantum_objects = quantum_objects
         super(UnblockEvent, self).__init__(
             time=time,
             required_objects=self.quantum_objects,
             priority=priority,
             ignore_blocked=True,
+            callback_functions=callback_functions,
         )
 
     def __repr__(self):
         return (
             self.__class__.__name__
-            + "(time={}, quantum_objects={}, priority={})".format(
-                repr(self.time), repr(self.quantum_objects), repr(self.priority)
-            )
+            + f"(time={self.time}, quantum_objects={self.quantum_objects}, priority={self.priority}), "
+            + f"callback_functions={self._callback_functions}"
         )
 
     def __str__(self):
