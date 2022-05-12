@@ -26,7 +26,7 @@ installing it in a dedicated virtual environment may be preferable.
 ## Documentation
 
 The Documentation is hosted on [readthedocs](https://readthedocs.org/) and
-includes some example setups of how to use ReQuSim to simulate a simple
+includes some example setups of how to use ReQuSim to simulate basic
 key distribution protocols.
 
 Documentation: [https://requsim.readthedocs.io](https://requsim.readthedocs.io)
@@ -41,7 +41,7 @@ is chosen such that one can consider very general error models (basically
 anything that can be described as a quantum channel), but not modeling down
 to the actual physical level.
 
-The abstractions used in ReQuSim lend itself to describing protocols as
+The abstractions used in ReQuSim lend themselves to describing protocols as
 high-level strategies (e.g. if two pairs are present, perform entanglement
 swapping), but in principle any strategy can be used to schedule arbitrary
 events in the event system.
@@ -55,7 +55,7 @@ individual messages being passed.
 
 In summary, ReQuSim can be used for:
   * Modelling a variety of setups for quantum repeaters, like fiber based and
-    or free-space based repeater, through flexible loss and noise models.
+    free-space based repeater, through flexible loss and noise models.
   * Obtaining numerical key rates for repeater protocols that are challenging to
     evaluate analytically.
   * Testing the effect of strategies for repeater protocols at a high level,
@@ -88,10 +88,12 @@ quantum networks (list obviously not exhaustive):
   * [NetSquid](https://netsquid.org/): Includes performance of physical and
     link layer in greater detail. Supports multiple ways to store quantum states
     (e.g. pure states, mixed states, stabilizers).
-  * [QuISP](https://github.com/sfc-aqua/quisp): Focuses on high level network
-    aspects.
-  * [QuNetSim](https://github.com/tqsd/QuNetSim): Focuses on high level network
-    aspects.
+  * [QuISP](https://github.com/sfc-aqua/quisp): Tracks errors instead of full
+    states. While lower level operations are supported, the focus is on
+    networking aspects.
+  * [QuNetSim](https://github.com/tqsd/QuNetSim): Supports multiple backends
+    for simulating quantum objects, which can support lower level operations.
+    QuNetSim itself focuses on the networking aspects.
 
 ReQuSim's level of abstraction works very well for exploring and comparing
 strategies for quantum repeaters. While it aims to be flexible and
