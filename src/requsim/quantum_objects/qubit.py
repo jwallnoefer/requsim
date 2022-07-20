@@ -84,7 +84,10 @@ class Qubit(WorldObject):
         self._time_dependent_noises += [noise_channel]
 
     def remove_time_dependent_noise(self, noise_channel):
-        self._time_dependent_noises.remove(noise_channel)
+        try:
+            self._time_dependent_noises.remove(noise_channel)
+        except ValueError:  # happens if already removed
+            pass
 
     def add_noise_handler(self, noise_handler):
         # try handling unresolved noise with the new noise_handler
