@@ -29,7 +29,7 @@ def binary_entropy(p):
 
 
 def calculate_keyrate_time(
-    correlations_z, correlations_x, err_corr_ineff, time_interval, return_std=False
+    correlations_z, correlations_x, err_corr_ineff, time_interval, return_std_err=False
 ):
     """Calculate the asymptotic key rate per time from a list of correlations.
 
@@ -56,25 +56,26 @@ def calculate_keyrate_time(
         1 means perfectly efficient; >1 indicates inefficiencies
     time_interval : scalar
         Time interval in which the raw bits were collected.
-    return_std : bool
-        Whether to also compute and return the standard deviation of the
+    return_std_err : bool
+        Whether to also compute and return the standard error of the mean of the
         key rate. Default: False
 
     Returns
     -------
     scalar or tuple of scalars
-        If return_std is False, returns the key rate.
-        If return_std is True, returns at tuple of key rate and
-        standard deviation of the key rate.
+        If return_std_err is False, returns the key rate.
+        If return_std_err is True, returns at tuple of key rate and
+        standard error of the mean of the key rate.
 
     """
     e_z = 1 - np.mean(correlations_z)
     e_x = 1 - np.mean(correlations_x)
-    pair_per_time = len(correlations_z) / time_interval
+    num_pairs = len(correlations_z)
+    pair_per_time = num_pairs / time_interval
     keyrate = pair_per_time * (
         1 - binary_entropy(e_x) - err_corr_ineff * binary_entropy(e_z)
     )
-    if not return_std:
+    if not return_std_err:
         return keyrate
     # use error propagation formula
     if e_z == 0:
@@ -88,11 +89,12 @@ def calculate_keyrate_time(
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
-    return keyrate, keyrate_std
+    keyrate_std_err = keyrate_std / np.sqrt(num_pairs)
+    return keyrate, keyrate_std_err
 
 
 def calculate_keyrate_channel_use(
-    correlations_z, correlations_x, err_corr_ineff, resource_list, return_std=False
+    correlations_z, correlations_x, err_corr_ineff, resource_list, return_std_err=False
 ):
     """Calculate the asymptotic key rate per resource from a list of correlations.
 
@@ -127,25 +129,26 @@ def calculate_keyrate_channel_use(
         A list containing the number of resources each set of raw bits consumed.
         This might not make sense if the number of consumed resources is not
         directly assignable to one particular set of raw bits.
-    return_std : bool
-        Whether to also compute and return the standard deviation of the
+    return_std_err : bool
+        Whether to also compute and return the standard error of the mean of the
         key rate. Default: False
 
     Returns
     -------
     scalar or tuple of scalars
-        If return_std is False, returns the key rate.
+        If return_std_err is False, returns the key rate.
         If return_std is True, returns at tuple of key rate and
         standard deviation of the key rate.
 
     """
     e_z = 1 - np.mean(correlations_z)
     e_x = 1 - np.mean(correlations_x)
-    pair_per_resource = len(correlations_z) / np.sum(resource_list)
+    num_pairs = len(correlations_z)
+    pair_per_resource = num_pairs / np.sum(resource_list)
     keyrate = pair_per_resource * (
         1 - binary_entropy(e_x) - err_corr_ineff * binary_entropy(e_z)
     )
-    if not return_std:
+    if not return_std_err:
         return keyrate
     # use error propagation formula
     if e_z == 0:
@@ -159,7 +162,8 @@ def calculate_keyrate_channel_use(
             * (-np.log2(e_z) + np.log2(1 - e_z)) ** 2
             * np.std(correlations_z) ** 2
         )
-    return keyrate, keyrate_std
+    keyrate_std_err = keyrate_std / np.sqrt(num_pairs)
+    return keyrate, keyrate_std_err
 
 
 def calculate_keyrate_channel_use_from_time(
@@ -168,7 +172,7 @@ def calculate_keyrate_channel_use_from_time(
     err_corr_ineff,
     time_list,
     trial_time,
-    return_std=False,
+    return_std_err=False,
 ):
     """Calculate the asymptotic key rate per resource with only timing info.
 
@@ -199,8 +203,8 @@ def calculate_keyrate_channel_use_from_time(
     trial_time : scalar
         The time one trial to establish a pair takes. Usually something like
         preparation time + 2 * distance / communication speed.
-    return_std : bool
-        Whether to also compute and return the standard deviation of the
+    return_std_err : bool
+        Whether to also compute and return the standard error of the mean of the
         key rate. Default: False
 
     Returns
@@ -218,7 +222,7 @@ def calculate_keyrate_channel_use_from_time(
         correlations_x=correlations_x,
         err_corr_ineff=err_corr_ineff,
         resource_list=resource_list,
-        return_std=return_std,
+        return_std_err=return_std_err,
     )
 
 
@@ -238,12 +242,15 @@ def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
     Returns
     -------
     list of scalars
-        contains: average fidelity,
-                  standard deviation of fidelity,
+        contains: raw rate,
+                  average fidelity,
+                  standard error of the mean of fidelity,
                   average asymptotic key rate per time,
-                  standard deviatoin of key rate per time
+                  standard error of the mean of key rate per time
 
     """
+    raw_rate = len(data_frame["time"]) / data_frame["time"].iloc[-1]
+
     states = data_frame["state"]
 
     fidelity_list = np.real_if_close(
@@ -253,7 +260,7 @@ def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
         ]
     )
     fidelity = np.mean(fidelity_list)
-    fidelity_std = np.std(fidelity_list)
+    fidelity_std_err = np.std(fidelity_list) / np.sqrt(len(fidelity_list))
 
     z0z0 = mat.tensor(mat.z0, mat.z0)
     z1z1 = mat.tensor(mat.z1, mat.z1)
@@ -277,16 +284,17 @@ def standard_bipartite_evaluation(data_frame, err_corr_ineff=1):
     )
     correlations_x[correlations_x > 1] = 1
 
-    key_per_time, key_per_time_std = calculate_keyrate_time(
+    key_per_time, key_per_time_std_err = calculate_keyrate_time(
         correlations_z=correlations_z,
         correlations_x=correlations_x,
         err_corr_ineff=err_corr_ineff,
         time_interval=data_frame["time"].iloc[-1],
-        return_std=True,
+        return_std_err=True,
     )
     return [
+        raw_rate,
         fidelity,
-        fidelity_std,
+        fidelity_std_err,
         key_per_time,
-        key_per_time_std,
+        key_per_time_std_err,
     ]
