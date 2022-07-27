@@ -2,6 +2,48 @@
 requires = ["setuptools>=57", "wheel", "setuptools_scm>=6.3"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "requsim"
+description = "A simulation framework for quantum repeaters"
+readme = "README.md"
+authors = [
+    { name = "Julius Wallnöfer" }
+]
+license = {file = "LICENSE"}
+dependencies = [
+    "numpy>=1.21.2",
+    "pandas>=1.3.3"
+]
+classifiers=[
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Intended Audience :: Science/Research",
+]
+keywords = [
+    "quantum information",
+    "quantum information theory",
+    "quantum communication",
+    "quantum repeater"
+]
+requires-python = ">=3.8.10"
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/jwallnoefer/requsim"
+
+[project.optional-dependencies]
+test = ["pytest>=6.2.5"]
+docs = [
+    "sphinx",
+    "autodocsumm",
+    "recommonmark",
+    "sphinx-rtd-theme"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools_scm]
 write_to = "src/requsim/version.py"
 local_scheme = "no-local-version"
