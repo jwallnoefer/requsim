@@ -443,7 +443,7 @@ class EntanglementSwappingEvent(Event):
             qubit.destroy()
         pair1.destroy()
         pair2.destroy()
-        return {"output_pair": new_pair}
+        return {"output_pair": new_pair, "swapping_station": self.station}
 
 
 class DiscardQubitEvent(Event):
@@ -621,6 +621,13 @@ class EntanglementPurificationEvent(Event):
                 output_pair.destroy()
                 output_pair.qubits[0].destroy()
                 output_pair.qubits[1].destroy()
+                return {
+                    "destroyed_objects": [
+                        output_pair,
+                        output_pair.qubits[0],
+                        output_pair.qubits[1],
+                    ]
+                }
 
             destroy_event = GenericEvent(
                 time=self.time + self.communication_time,
