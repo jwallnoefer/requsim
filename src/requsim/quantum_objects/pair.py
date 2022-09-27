@@ -1,5 +1,4 @@
 from . import WorldObject
-from ..libs.aux_functions import apply_single_qubit_map
 
 
 class Pair(WorldObject):
