@@ -18,7 +18,8 @@ connect A and B. Repeat until the desired number of pairs has been established.
 Error model: The entangled pairs are considered to be perfect upon generation.
 The quantum memories introduce a time-dependent dephasing noise while a qubit
 sits in memory. The Bell measurement to perform the entanglement swapping is
-assumed to be perfect.
+modeled to always succeed, but to introduce some additional depolarizing noise
+in the process.
 
 For a detailed explanation of this type of protocol see e.g.
 D. Luong, L. Jiang, J. Kim, N. Lütkenhaus; Applied Physics B 122, 96 (2016)

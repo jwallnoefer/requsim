@@ -13,12 +13,6 @@ class Pair(WorldObject):
         The two qubits that are part of this entangled Pair.
     initial_state : np.ndarray
         The two qubit system is intialized with this density matrix.
-    initial_cost_add : scalar or None
-        Initial resource cost (in cumulative channel uses). Can be left None if
-        tracking is not done. Default: None
-    initial_cost_max : scalar or None
-        Initial resource cost (in max channel uses). Can be left None if
-        tracking is not done. Default: None
     label : str or None
         Optionally, provide a custom label.
 
@@ -32,12 +26,6 @@ class Pair(WorldObject):
         Alternative way to access `self.qubits[1]`
     qubits : List of qubits
         The two qubits that are part of this entangled Pair.
-    resource_cost_add : scalar or None
-        cumulative channel uses that were needed to create this pair.
-        None means resource are not tracked.
-    resource_cost_max : scalar or None
-        max channel uses that were needed to create this pair.
-        None means resource are not tracked.
     type : str
         "Pair"
 
@@ -63,6 +51,12 @@ class Pair(WorldObject):
         self.qubit1.add_noise_handler(self._qubit1_noise_handler)
         self.qubit2.add_noise_handler(self._qubit2_noise_handler)
         super(Pair, self).__init__(world=world, label=label)
+
+    def __repr__(self):
+        return self.__class__.__name__ + (
+            f"(world={self.world}, qubits={self.qubits}, "
+            f"initial_state={self.state}, label={self.label})"
+        )
 
     def __str__(self):
         return (
