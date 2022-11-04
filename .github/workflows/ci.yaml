@@ -18,17 +18,17 @@ jobs:
     name: Check code quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: '3.8'
-      - uses: pre-commit/action@v2.0.3
+      - uses: pre-commit/action@v3.0.0
 
   test_pipenv:
     name: Run tests in development environment with pipenv
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: '3.8'
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check package installation via setup.py works
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: '3.8'
@@ -60,7 +60,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Run Tests on ${{ matrix.os }} - Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
@@ -73,7 +73,7 @@ jobs:
     needs: [pre-commit, test_pipenv, test_general]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Fetch all tags, so setuptools_scm can determine version
         run: git fetch --prune --unshallow --tags
       - uses: actions/setup-python@v3
@@ -94,7 +94,7 @@ jobs:
     needs: [dist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: '3.8'
