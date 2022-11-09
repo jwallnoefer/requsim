@@ -179,7 +179,13 @@ if __name__ == "__main__":
     results = pd.DataFrame(
         data=result_list,
         index=length_list,
-        columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std"],
+        columns=[
+            "raw_rate",
+            "fidelity",
+            "fidelity_std_err",
+            "key_per_time",
+            "key_per_time_std_err",
+        ],
     )
     print(results)
     # plotting key_per_time vs. length is usually what you want to do with these
