@@ -3,6 +3,8 @@
 [![PyPI](http://img.shields.io/pypi/v/requsim.svg)](https://pypi.python.org/pypi/requsim)
 [![Docs](https://readthedocs.org/projects/requsim/badge/?version=latest)](https://requsim.readthedocs.io)
 [![Tests, Artifacts and Release](https://github.com/jwallnoefer/requsim/actions/workflows/ci.yaml/badge.svg)](https://github.com/jwallnoefer/requsim/actions/workflows/ci.yaml)
+[![DOI](https://zenodo.org/badge/413313171.svg)](https://zenodo.org/badge/latestdoi/413313171)
+
 
 ReQuSim is a simulation platform for quantum repeaters. It allows to evaluate
 quantum repeater strategies for long-distance quantum key distribution and
