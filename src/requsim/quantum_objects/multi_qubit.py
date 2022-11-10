@@ -4,7 +4,7 @@ from . import WorldObject
 class MultiQubit(WorldObject):
     """A quantum object representing a state of multiple qubits."""
 
-    def __init__(self, world, qubits, initial_state, label):
+    def __init__(self, world, qubits, initial_state, label=None):
         self._qubits = tuple(qubits)
         self._num_qubits = len(self._qubits)
         self.state = initial_state
@@ -25,18 +25,20 @@ class MultiQubit(WorldObject):
         )
 
     def __str__(self):
-        f"{self.label} with qubits"
-        +", ".join([x.label for x in self.qubits])
-        +" between stations "
-        +", ".join(
-            [
-                x._info["station"].label
-                if x._info["station"]
-                else str(x._info["station"])
-                for x in self.qubits
-            ]
+        return (
+            f"{self.label} with qubits"
+            + ", ".join([x.label for x in self.qubits])
+            + " between stations "
+            + ", ".join(
+                [
+                    x._info["station"].label
+                    if x._info["station"]
+                    else str(x._info["station"])
+                    for x in self.qubits
+                ]
+            )
+            + "."
         )
-        +"."
 
     @property
     def type(self):
@@ -66,7 +68,10 @@ class MultiQubit(WorldObject):
             handling_successful = True
             return handling_successful
 
+        return qubit_noise_handler
+
     def destroy(self):
         for qubit in self._qubits:
             if qubit in qubit.world:  # doesn't need to get deleted twice
                 qubit.remove_noise_handler(self._noise_handler_by_qubit[qubit])
+        super(MultiQubit, self).destroy()
