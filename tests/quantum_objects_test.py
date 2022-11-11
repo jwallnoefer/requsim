@@ -72,6 +72,13 @@ class TestQuantumObjects(unittest.TestCase):
             world=self.world, qubits=qubits, initial_state=np.diag([1, 0, 0, 0])
         )
         self._aux_general_test(pair)
+        # test that qubits are read only
+        with self.assertRaises(AttributeError):
+            pair.qubits = [Qubit(world=self.world), Qubit(world=self.world)]
+        with self.assertRaises(AttributeError):
+            pair.qubit1 = Qubit(world=self.world)
+        with self.assertRaises(AttributeError):
+            pair.qubit2 = Qubit(world=self.world)
 
     def test_unresolved_noise(self):
         noisy_qubit = Qubit(world=self.world, unresolved_noises=[example_noise_channel])

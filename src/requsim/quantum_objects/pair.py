@@ -12,21 +12,13 @@ class Pair(WorldObject):
         The two qubits that are part of this entangled Pair.
     initial_state : np.ndarray
         The two qubit system is intialized with this density matrix.
-    label : str or None
+    label : str or None, optional
         Optionally, provide a custom label.
 
     Attributes
     ----------
     state : np.ndarray
         Current density matrix of this two qubit system.
-    qubit1 : Qubit
-        Alternative way to access `self.qubits[0]`
-    qubit2 : Qubit
-        Alternative way to access `self.qubits[1]`
-    qubits : List of qubits
-        The two qubits that are part of this entangled Pair.
-    type : str
-        "Pair"
 
     """
 
@@ -38,7 +30,7 @@ class Pair(WorldObject):
         label=None,
     ):
         # maybe add a check that qubits are always in the same order?
-        self.qubits = qubits
+        self._qubits = tuple(qubits)
         self.state = initial_state
         self.qubit1.update_info({"pair": self})
         self.qubit1.higher_order_object = self
@@ -77,6 +69,10 @@ class Pair(WorldObject):
     def type(self):
         return "Pair"
 
+    @property
+    def qubits(self):
+        return tuple(self._qubits)
+
     # not sure we actually need to be able to change qubits
     @property
     def qubit1(self):
@@ -88,11 +84,7 @@ class Pair(WorldObject):
             The first qubit of the pair.
 
         """
-        return self.qubits[0]
-
-    @qubit1.setter
-    def qubit1(self, qubit):
-        self.qubits[0] = qubit
+        return self._qubits[0]
 
     @property
     def qubit2(self):
@@ -104,11 +96,7 @@ class Pair(WorldObject):
             The second qubit of the pair.
 
         """
-        return self.qubits[1]
-
-    @qubit2.setter
-    def qubit2(self, qubit):
-        self.qubits[1] = qubit
+        return self._qubits[1]
 
     def _qubit1_noise_handler(self, noise_channel, *args, **kwargs):
         self.state = noise_channel.apply_to(

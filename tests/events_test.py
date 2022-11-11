@@ -246,7 +246,7 @@ class TestEvents(unittest.TestCase):
             qubits=[station1.create_qubit(), station2.create_qubit()],
             initial_state=_random_test_state(n=2),
         )
-        should_require = [pair1, pair2] + pair1.qubits + pair2.qubits
+        should_require = [pair1, pair2] + list(pair1.qubits) + list(pair2.qubits)
         self._aux_test_event_with_callback(
             EntanglementPurificationEvent,
             should_require=should_require,

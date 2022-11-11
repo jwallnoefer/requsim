@@ -2,7 +2,26 @@ from . import WorldObject
 
 
 class MultiQubit(WorldObject):
-    """A quantum object representing a state of multiple qubits."""
+    """A quantum object representing a state of multiple qubits.
+
+    Parameters
+    ----------
+    world : World
+        This WorldObject is an object in this world.
+    qubits : list of Qubits
+        Multiple qubits that are part of this collection.
+    initial_state : np.ndarray
+        The multi-qubit system is initialized with this density matrix.
+        Shape should fit the number of qubits in `qubits`
+    label : type
+        Description of parameter `label`.
+
+    Attributes
+    ----------
+    state : np.ndarray
+        Current density matrix of this n-qubit system.
+
+    """
 
     def __init__(self, world, qubits, initial_state, label=None):
         self._qubits = tuple(qubits)
