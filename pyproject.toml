@@ -33,7 +33,7 @@ dynamic = ["version"]
 homepage = "https://github.com/jwallnoefer/requsim"
 
 [project.optional-dependencies]
-test = ["pytest>=6.2.5"]
+test = ["pytest>=7.2.0"]
 docs = [
     "sphinx",
     "autodocsumm",

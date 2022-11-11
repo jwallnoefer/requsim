@@ -9,7 +9,7 @@ pandas = "*"
 
 [dev-packages]
 pre-commit = "*"
-pytest = "*"
+pytest = ">=7.2.0"
 setuptools = "*"
 wheel = "*"
 requsim = {editable = true, path = "."}
