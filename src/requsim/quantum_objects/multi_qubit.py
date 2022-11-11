@@ -12,9 +12,9 @@ class MultiQubit(WorldObject):
         Multiple qubits that are part of this collection.
     initial_state : np.ndarray
         The multi-qubit system is initialized with this density matrix.
-        Shape should fit the number of qubits in `qubits`
-    label : type
-        Description of parameter `label`.
+        Shape should fit the number of qubits in `qubits`.
+    label : str or None, optional
+        Optionally, provide a custom label.
 
     Attributes
     ----------
