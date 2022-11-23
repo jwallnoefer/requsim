@@ -1,6 +1,6 @@
 """Tests for noise channels."""
 import pytest
-from requsim.noise import NoiseChannel, freeze_noise_channel
+from requsim.noise import NoiseChannel
 import numpy as np
 import requsim.libs.matrix as mat
 from unittest.mock import MagicMock
@@ -83,7 +83,7 @@ def test_freeze_noise_channel():
                 n_qubits=noise_qubits, channel_function=mock_function
             )
             # without frozen args/kwargs
-            frozen_channel = freeze_noise_channel(test_channel)
+            frozen_channel = test_channel.freeze()
             if n_qubits == noise_qubits:
                 frozen_channel(test_state)
                 mock_function.assert_called_with(test_state)
@@ -95,9 +95,7 @@ def test_freeze_noise_channel():
             # with frozen args and kwargs
             test_args = (3, "bear", 42.2)
             test_kwargs = {"foo": 33, "bar": "apple"}
-            frozen_channel = freeze_noise_channel(
-                test_channel, *test_args, **test_kwargs
-            )
+            frozen_channel = test_channel.freeze(*test_args, **test_kwargs)
             if n_qubits == noise_qubits:
                 frozen_channel(test_state)
                 mock_function.assert_called_with(test_state, *test_args, **test_kwargs)

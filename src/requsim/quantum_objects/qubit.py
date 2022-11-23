@@ -1,6 +1,5 @@
 from . import WorldObject
 from collections import defaultdict
-from ..noise import freeze_noise_channel
 
 
 class Qubit(WorldObject):
@@ -117,9 +116,7 @@ class Qubit(WorldObject):
             noise_channel, *args, **kwargs
         )
         if not handling_successful:
-            self._unresolved_noises += [
-                freeze_noise_channel(noise_channel, *args, **kwargs)
-            ]
+            self._unresolved_noises += [noise_channel.freeze(*args, **kwargs)]
 
     def _on_update_time(self):
         time_interval = self.event_queue.current_time - self.last_updated
