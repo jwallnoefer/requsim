@@ -1,6 +1,7 @@
 from .libs.aux_functions import apply_single_qubit_map, apply_m_qubit_map
 from dataclasses import dataclass
 from typing import Union
+from warnings import warn
 
 
 class NoiseChannel(object):
@@ -58,6 +59,35 @@ class NoiseChannel(object):
                 map_func=self, qubit_indices=qubit_indices, rho=rho, *args, **kwargs
             )
 
+    def freeze(self, *args, **kwargs):
+        """Turn NoiseChannel with variable arguments into a static noise channel.
+
+        This is useful when the application of the channel is delayed, so the
+        args and kwargs do not need to be stored separately until that happens.
+
+        Parameters
+        ----------
+        *args : any
+            Any args the channel should be called with when it is finally applied.
+        **kwargs : any
+            Any kwargs the channel should be called with when it is finally applied.
+
+        Returns
+        -------
+        NoiseChannel
+            The frozen NoiseChannel.
+
+        """
+        args_to_freeze = args
+        kwargs_to_freeze = kwargs
+
+        def new_channel_func(rho):
+            # this works because each NoiseChannel is also a callable map
+            # that acts on a state of appropriate dimensions
+            return self(rho, *args_to_freeze, **kwargs_to_freeze)
+
+        return self.__class__(n_qubits=self.n_qubits, channel_function=new_channel_func)
+
 
 @dataclass
 class NoiseModel(object):
@@ -87,7 +117,11 @@ class NoiseModel(object):
 
 
 def freeze_noise_channel(noise_channel, *args, **kwargs):
-    """Turn NoiseChannel with variable arguments into a static noise channel.
+    """DEPRECATED. Use NoiseChannel.freeze(*args, **kwargs) instead.
+
+    Deprecated because not compatible with extensions of different noise models.
+
+    Turn NoiseChannel with variable arguments into a static noise channel.
 
     This is useful when the application of the channel is delayed, so the
     args and kwargs do not need to be stored separately until that happens.
@@ -95,18 +129,23 @@ def freeze_noise_channel(noise_channel, *args, **kwargs):
     Parameters
     ----------
     noise_channel : NoiseChannel
-        Description of parameter `noise_channel`.
-    *args : type
-        Description of parameter `*args`.
-    **kwargs : type
-        Description of parameter `**kwargs`.
+        The NoiseChannel to freeze.
+    *args : any
+        Any args the channel should be called with when it is finally applied.
+    **kwargs : any
+        Any kwargs the channel should be called with when it is finally applied.
 
     Returns
     -------
-    type
-        Description of returned object.
+    NoiseChannel
+        The frozen NoiseChannel.
 
     """
+    warn(
+        "freeze_noise_channel is deprecated. Use NoiseChannel.freeze method instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     args_to_freeze = args
     kwargs_to_freeze = kwargs
 
