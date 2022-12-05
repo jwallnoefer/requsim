@@ -87,6 +87,9 @@ repeater architecture).
 ReQuSim has a different scope and aim from some other simulation packages for
 quantum networks (list obviously not exhaustive):
 
+  * [SimulaQron](http://www.simulaqron.org/): A distributed classical simulation
+    of multiple quantum computers that can use real world classical  
+    communication to simulate communication times.
   * [NetSquid](https://netsquid.org/): Includes performance of physical and
     link layer in greater detail. Supports multiple ways to store quantum states
     (e.g. pure states, mixed states, stabilizers).
@@ -105,7 +108,7 @@ extendable, another set of abstractions might work better for other questions.
 An earlier (unreleased) version of requsim was used for this publication:
 
 > Simulating quantum repeater strategies for multiple satellites <br>
-> J. Wallnöfer, F. Hahn, M. Gündoğan, J. S. Sidhu, F. Krüger, N. Walk, J. Eisert, J. Wolters <br>
+> J. Wallnöfer, F. Hahn, M. Gündoğan, J. S. Sidhu, F. Wiesner, N. Walk, J. Eisert, J. Wolters <br>
 > Commun Phys **5**, 169 (2022); DOI: [10.1038/s42005-022-00945-9](https://doi.org/10.1038/s42005-022-00945-9) <br>
 > Preprint: [arXiv:2110.15806 [quant-ph]](https://doi.org/10.48550/arXiv.2110.15806);
 > Code archive: [jwallnoefer/multisat_qrepeater_sim_archive](https://github.com/jwallnoefer/multisat_qrepeater_sim_archive)
