@@ -77,9 +77,11 @@ but it is not intended to:
   * Simulate huge networks with 1000s of parties.
 
 
-Support for elementary building blocks other than Bell pairs is considered for
-future versions (e.g. distribution of GHZ states via a multipartite
-repeater architecture).
+There currently is limited support for elementary building blocks other than
+Bell pairs (e.g. distribution of GHZ states via a multipartite
+repeater architecture),
+however, there are no built-in events that support them yet. Extending support
+for multipartite states is planned for future versions.
 
 
 ### Other quantum network simulators
