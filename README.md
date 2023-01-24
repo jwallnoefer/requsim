@@ -72,7 +72,7 @@ In summary, ReQuSim can be used for:
 but it is not intended to:
   * Develop code that directly interacts with future quantum hardware.
   * In detail, model effects at the physical layer and some aspects of link
-    layer protocols. (However,they can be incorporated indirectly via quantum
+    layer protocols. (However, they can be incorporated indirectly via quantum
       channels and probability distributions.)
   * Simulate huge networks with 1000s of parties.
 
