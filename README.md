@@ -107,7 +107,14 @@ strategies for quantum repeaters. While it aims to be flexible and
 extendable, another set of abstractions might work better for other questions.
 
 ## Publications and related projects
-An earlier (unreleased) version of requsim was used for this publication:
+ReQuSim was used for this publication:
+
+> ReQuSim: Faithfully simulating near-term quantum repeaters <br>
+> J. Wallnöfer, F. Hahn, F. Wiesner, N. Walk, J. Eisert <br>
+> Preprint: [arXiv:2212.03896 [quant-ph]](https://doi.org/10.48550/arXiv.2212.03896);
+> Code archive: [jwallnoefer/nearterm-qrepeater-sim-archive](https://github.com/jwallnoefer/nearterm-qrepeater-sim-archive)
+
+An earlier (unreleased) version of ReQuSim was used for this publication:
 
 > Simulating quantum repeater strategies for multiple satellites <br>
 > J. Wallnöfer, F. Hahn, M. Gündoğan, J. S. Sidhu, F. Wiesner, N. Walk, J. Eisert, J. Wolters <br>
