@@ -62,7 +62,11 @@ class Event(ABC):
         self.priority = priority
         self.ignore_blocked = ignore_blocked
         self.event_queue = None
-        self._return_dict = {"event_type": self.type, "resolve_successful": True}
+        self._return_dict = {
+            "event": self,
+            "event_type": self.type,
+            "resolve_successful": True,
+        }
         if callback_functions is None:
             callback_functions = []
         self._callback_functions = callback_functions
