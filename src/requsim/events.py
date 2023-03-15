@@ -11,6 +11,10 @@ class Event(ABC):
     """Abstract base class for events.
 
     Events are scheduled in an EventQueue and resolved at a specific time.
+    The resolution is performed by calling the Event.resolve method once.
+    Subclasses of Event need to overwrite the Event._main_effect method
+    to perform the desired action the event represents. All references
+    the _main_effect needs should be provided at initialization.
 
     Parameters
     ----------
@@ -113,11 +117,15 @@ class Event(ABC):
     def _main_effect(self):
         """Resolve the main effect of the event.
 
+        This is the main method that needs to be overwritten
+        by subclasses.
+
         Returns
         -------
         None or dict
-            dict may optionally be used to pass information to the protocol.
-            The protocol will not necessarily use this information.
+            dict may optionally be used to pass information that
+            can be used by a protocol or callbacks. Will be used
+            to update the return dict of the resolve method.
 
         """
         pass
@@ -128,9 +136,24 @@ class Event(ABC):
         Returns
         -------
         dict
-            dict may contain additional information that can be passed to the
-            protocol. The protocol will not necessarily use this information.
+            The return dict dict can be used by a protocol or
+            callbacks. Specific events may provide additional
+            key-value pairs, but will always contain at least:
 
+            "event" : Event
+                The event object itself. While all necessary
+                information should be provided with separate
+                keys, this can be used as a fallback.
+            "event_type" : str
+                The type property of this event.
+            "resolve_successful" : bool
+                False if something prevented the resolution
+                of the event, e.g. the required quantum
+                objects no longer exist. Note that this indicates
+                only whether the event could be resolved according
+                to the event system rules, and not the
+                success or failure of an event with an inherently
+                probabilistic effect (such as entanglement purification).
         """
         if self._check_event_is_valid():
             main_return_dict = self._main_effect()
@@ -169,6 +192,8 @@ class Event(ABC):
 
 class GenericEvent(Event):
     """Event that executes arbitrary function.
+
+    Additional information in return dict of resolve method: whatever `resolve_function` returns.
 
     Parameters
     ----------
@@ -239,6 +264,13 @@ class GenericEvent(Event):
 
 class SourceEvent(Event):
     """An Event generating an entangled pair.
+
+    Additional information in return dict of resolve method:
+
+    "source" : Source
+        The source that generated the pair.
+    "output_pair" : Pair
+        The pair that was generated.
 
     Parameters
     ----------
@@ -319,6 +351,13 @@ class SourceEvent(Event):
 
 class EntanglementSwappingEvent(Event):
     """An event to perform entanglement swapping.
+
+    Additional information in return dict of resolve method:
+
+    "output_pair" : Pair
+        The resulting pair after the entanglement swapping operation.
+    "swapping_station" : Station
+        The station that performed the entanglement swapping.
 
     Parameters
     ----------
@@ -455,6 +494,8 @@ class DiscardQubitEvent(Event):
 
     For example if the qubit sat in memory too long and is discarded.
 
+    Additional information in return dict of resolve method: None
+
     Parameters
     ----------
     time : scalar
@@ -518,7 +559,14 @@ class DiscardQubitEvent(Event):
 
 
 class EntanglementPurificationEvent(Event):
-    """Short summary.
+    """Perform a step of an entanglement purification protocol.
+
+    Additional information in return dict of resolve method:
+    "output_pair" : Pair
+        The output pair of the entanglement purification step.
+    "is_successful" : bool
+        True if the entanglement purification was successful,
+        false if not.
 
     Parameters
     ----------
@@ -531,7 +579,7 @@ class EntanglementPurificationEvent(Event):
         how long it takes for the result of the protocol to be communcated
         the remaining pair will be blocked for that amount of time
     protocol : {"dejmps"} or callable
-        Can be one of the pre-installed or an arbitrary callable that takes
+        Can be one of the pre-defined or an arbitrary callable that takes
         a tensor product of pair states as input and returns a tuple of
         (success probability, state of a single pair) back.
         So far only supports n->1 protocols.
@@ -650,6 +698,12 @@ class UnblockEvent(Event):
     This is useful to mark the time when necessary classical information has
     arrived and the quantum objects may be used by the protocol again.
     (e.g. after entanglement purification)
+
+    Additional information in return dict of resolve method:
+
+    "unblocked_objects" : list of WorldObject
+        All objects that were unblocked by this event.
+
 
     Parameters
     ----------
