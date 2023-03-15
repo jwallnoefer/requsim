@@ -18,6 +18,7 @@ autodocsumm = "*"
 recommonmark = "*"
 sphinx-rtd-theme = "*"
 setuptools-scm = "*"
+certifi = ">=2022.12.7"  # responding to dependabot alert, affects only docs
 
 [requires]
 python_version = "3.8"
