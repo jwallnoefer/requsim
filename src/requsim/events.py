@@ -91,10 +91,22 @@ class Event(ABC):
         """
         return self.__class__.__name__
 
-    def _check_event_is_valid(self):
-        objects_exist = np.all(
+    def req_objects_exist(self):
+        """Check if all required objects still exist in the world.
+
+        Useful to check if the event is outdated.
+
+        Returns
+        -------
+        bool
+            True if all required objects still exist, False otherwise.
+        """
+        return np.all(
             [(req_object in req_object.world) for req_object in self.required_objects]
         )
+
+    def _check_event_is_valid(self):
+        objects_exist = self.req_objects_exist()
         if self.ignore_blocked:
             objects_available = True
         else:
@@ -770,7 +782,12 @@ class EventQueue(object):
         self.queue = []
         self.current_time = 0
         self._stats = defaultdict(
-            lambda: {"scheduled": 0, "resolved": 0, "resolved_successfully": 0}
+            lambda: {
+                "scheduled": 0,
+                "resolved": 0,
+                "resolved_successfully": 0,
+                "removed": 0,
+            }
         )
 
     def __str__(self):
@@ -939,5 +956,31 @@ class EventQueue(object):
                 f"{count_dict['scheduled']} scheduled",
                 f"{count_dict['resolved']} resolved",
                 f"{count_dict['resolved_successfully']} resolved successfully",
+                f"{count_dict['removed']} removed",
             ]
             print("\n    ".join(string_parts))
+
+    def remove_by_condition(self, condition):
+        """Remove events from event queue if a condition is met.
+
+        Removing means they will not be resolved and very importantly,
+        their callbacks will not be triggered.
+
+        Parameters
+        ----------
+        condition : callable
+            This function will be called with the event as argument
+            for every event in the queue. If it returns something Truthy,
+            the event will be removed.
+
+        Returns
+        -------
+        list[Event]
+            All removed events.
+        """
+        events_to_remove = [event for event in self.queue if condition(event)]
+        for event in events_to_remove:
+            self.queue.remove(event)
+            self._stats[event.type]["removed"] += 1
+
+        return events_to_remove
