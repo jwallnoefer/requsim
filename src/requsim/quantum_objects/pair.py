@@ -44,9 +44,13 @@ class Pair(WorldObject):
         super(Pair, self).__init__(world=world, label=label)
 
     def __repr__(self):
-        return self.__class__.__name__ + (
-            f"(world={self.world}, qubits={self.qubits}, "
-            f"initial_state={self.state}, label={self.label})"
+        return (
+            f'<{self.__class__.__module__}.{self.__class__.__name__} "{self.label}" '
+            + "qubits=["
+            + ", ".join([x.label for x in self.qubits])
+            + "]"
+            + f" with state at last update {self.state}"
+            + ">"
         )
 
     def __str__(self):
