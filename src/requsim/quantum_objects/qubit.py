@@ -46,7 +46,7 @@ class Qubit(WorldObject):
     def __repr__(self):
         return self.__class__.__name__ + (
             f"(world={self.world}, unresolved_noises={self._unresolved_noises}, "
-            f"info={self._info}, label={self.label})"
+            f"info={dict(self._info)}, label={self.label})"
         )
 
     def __str__(self):
