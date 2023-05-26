@@ -19,7 +19,7 @@ import requsim
 # -- Project information -----------------------------------------------------
 
 project = "requsim"
-copyright = "2021, Julius Wallnöfer"
+copyright = "2021-2023, Julius Wallnöfer"
 author = "Julius Wallnöfer"
 
 # The full version, including alpha/beta/rc tags
