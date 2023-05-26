@@ -95,6 +95,9 @@ quantum networks (list obviously not exhaustive):
   * [NetSquid](https://netsquid.org/): Includes performance of physical and
     link layer in greater detail. Supports multiple ways to store quantum states
     (e.g. pure states, mixed states, stabilizers).
+  * [SeQUeNCe](https://github.com/sequence-toolbox/SeQUeNCe): Another event based
+    simulator, that comes with built-in node types and has been used for
+    analyzing network throughput.
   * [QuISP](https://github.com/sfc-aqua/quisp): Tracks errors instead of full
     states. While lower level operations are supported, the focus is on
     networking aspects.
