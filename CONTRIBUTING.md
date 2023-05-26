@@ -1,4 +1,4 @@
-# Contributing to requsim
+# Contributing
 
 Code Contributions to requsim should be made on on their own Git
 branches via a pull request to its `dev` branch. The pull request will

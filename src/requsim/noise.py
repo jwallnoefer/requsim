@@ -33,7 +33,7 @@ class NoiseChannel(object):
 
     def apply_to(self, rho, qubit_indices, *args, **kwargs):
         # additional functionality e.g. for different ways to define channels may be added here
-        """Apply the noise channel to specified qubits of a state `rho`.
+        r"""Apply the noise channel to specified qubits of a state `rho` .
 
         Parameters
         ----------
@@ -41,7 +41,7 @@ class NoiseChannel(object):
             The density matrix the channel is applied to.
         qubit_indices : list of ints
             Numbering of qubits runs from 0...n-1
-        *args, **kwargs : are handed through to the appropriate function
+        \*args, \*\*kwargs : are handed through to the appropriate function
 
         Returns
         -------
@@ -60,16 +60,16 @@ class NoiseChannel(object):
             )
 
     def freeze(self, *args, **kwargs):
-        """Turn NoiseChannel with variable arguments into a static noise channel.
+        r"""Turn NoiseChannel with variable arguments into a static noise channel.
 
         This is useful when the application of the channel is delayed, so the
         args and kwargs do not need to be stored separately until that happens.
 
         Parameters
         ----------
-        *args : any
+        \*args : any
             Any args the channel should be called with when it is finally applied.
-        **kwargs : any
+        \*\*kwargs : any
             Any kwargs the channel should be called with when it is finally applied.
 
         Returns
@@ -117,7 +117,7 @@ class NoiseModel(object):
 
 
 def freeze_noise_channel(noise_channel, *args, **kwargs):
-    """DEPRECATED. Use NoiseChannel.freeze(*args, **kwargs) instead.
+    r"""DEPRECATED. Use NoiseChannel.freeze(\*args, \*\*kwargs) instead.
 
     Deprecated because not compatible with extensions of different noise models.
 
@@ -130,9 +130,9 @@ def freeze_noise_channel(noise_channel, *args, **kwargs):
     ----------
     noise_channel : NoiseChannel
         The NoiseChannel to freeze.
-    *args : any
+    \*args : any
         Any args the channel should be called with when it is finally applied.
-    **kwargs : any
+    \*\*kwargs : any
         Any kwargs the channel should be called with when it is finally applied.
 
     Returns

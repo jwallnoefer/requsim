@@ -14,8 +14,17 @@ User Manual
 .. toctree::
    :maxdepth: 1
 
+   readme
    examples
    api
+
+
+Development
+===================================
+.. toctree::
+   :maxdepth: 1
+
+   contributing
 
 Indices and tables
 ==================

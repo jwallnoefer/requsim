@@ -72,14 +72,16 @@ In summary, ReQuSim can be used for:
 but it is not intended to:
   * Develop code that directly interacts with future quantum hardware.
   * In detail, model effects at the physical layer and some aspects of link
-    layer protocols. (However,they can be incorporated indirectly via quantum
+    layer protocols. (However, they can be incorporated indirectly via quantum
       channels and probability distributions.)
   * Simulate huge networks with 1000s of parties.
 
 
-Support for elementary building blocks other than Bell pairs is considered for
-future versions (e.g. distribution of GHZ states via a multipartite
-repeater architecture).
+There currently is limited support for elementary building blocks other than
+Bell pairs (e.g. distribution of GHZ states via a multipartite
+repeater architecture),
+however, there are no built-in events that support them yet. Extending support
+for multipartite states is planned for future versions.
 
 
 ### Other quantum network simulators
@@ -87,9 +89,15 @@ repeater architecture).
 ReQuSim has a different scope and aim from some other simulation packages for
 quantum networks (list obviously not exhaustive):
 
+  * [SimulaQron](http://www.simulaqron.org/): A distributed classical simulation
+    of multiple quantum computers that can use real world classical  
+    communication to simulate communication times.
   * [NetSquid](https://netsquid.org/): Includes performance of physical and
     link layer in greater detail. Supports multiple ways to store quantum states
     (e.g. pure states, mixed states, stabilizers).
+  * [SeQUeNCe](https://github.com/sequence-toolbox/SeQUeNCe): Another event based
+    simulator, that comes with built-in node types and has been used for
+    analyzing network throughput.
   * [QuISP](https://github.com/sfc-aqua/quisp): Tracks errors instead of full
     states. While lower level operations are supported, the focus is on
     networking aspects.
@@ -102,10 +110,17 @@ strategies for quantum repeaters. While it aims to be flexible and
 extendable, another set of abstractions might work better for other questions.
 
 ## Publications and related projects
-An earlier (unreleased) version of requsim was used for this publication:
+ReQuSim was used for this publication:
+
+> ReQuSim: Faithfully simulating near-term quantum repeaters <br>
+> J. Wallnöfer, F. Hahn, F. Wiesner, N. Walk, J. Eisert <br>
+> Preprint: [arXiv:2212.03896 [quant-ph]](https://doi.org/10.48550/arXiv.2212.03896);
+> Code archive: [jwallnoefer/nearterm-qrepeater-sim-archive](https://github.com/jwallnoefer/nearterm-qrepeater-sim-archive)
+
+An earlier (unreleased) version of ReQuSim was used for this publication:
 
 > Simulating quantum repeater strategies for multiple satellites <br>
-> J. Wallnöfer, F. Hahn, M. Gündoğan, J. S. Sidhu, F. Krüger, N. Walk, J. Eisert, J. Wolters <br>
+> J. Wallnöfer, F. Hahn, M. Gündoğan, J. S. Sidhu, F. Wiesner, N. Walk, J. Eisert, J. Wolters <br>
 > Commun Phys **5**, 169 (2022); DOI: [10.1038/s42005-022-00945-9](https://doi.org/10.1038/s42005-022-00945-9) <br>
 > Preprint: [arXiv:2110.15806 [quant-ph]](https://doi.org/10.48550/arXiv.2110.15806);
 > Code archive: [jwallnoefer/multisat_qrepeater_sim_archive](https://github.com/jwallnoefer/multisat_qrepeater_sim_archive)
