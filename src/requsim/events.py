@@ -393,6 +393,7 @@ class EntanglementSwappingEvent(Event):
         return (
             self.__class__.__name__
             + f"(time={self.time}, pairs={self.pairs}), "
+            + f"station={self.station}, "
             + f"callback_functions={self._callback_functions}"
         )
 
