@@ -789,6 +789,7 @@ class EventQueue(object):
                 "removed": 0,
             }
         )
+        self._recurring_filters = []
 
     def __str__(self):
         return "EventQueue: " + str(self.queue)
@@ -881,6 +882,12 @@ class EventQueue(object):
             passed to the protocol.
 
         """
+        for recurring_filter in self._recurring_filters:
+            recurring_filter["counter"] += 1
+            if recurring_filter["counter"] > recurring_filter["filter_interval"]:
+                self.remove_by_condition(condition=recurring_filter["condition"])
+                recurring_filter["counter"] = 0
+
         event = self.queue[0]
         self.current_time = event.time
         return_message = event.resolve()
@@ -984,3 +991,27 @@ class EventQueue(object):
             self._stats[event.type]["removed"] += 1
 
         return events_to_remove
+
+    def add_recurring_filter(self, condition, filter_interval):
+        """Add a condition to remove invalid events in a regular interval.
+
+        The `remove_by_condition` method will be called with this condition
+        after `filter_interval` events have been resolved using the `resolve_next_event`
+        method.
+
+        Parameters
+        ----------
+        condition : callable
+            This function will be called with an event as argument.
+            Should return True if the event should be removed from the queue.
+        filter_interval : int
+            The condition will be checked after `filter_interval` events have been resolved.
+
+        Returns
+        -------
+        None
+
+        """
+        self._recurring_filters.append(
+            {"condition": condition, "filter_interval": filter_interval, "counter": 0}
+        )
