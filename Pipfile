@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 numpy = "*"
 pandas = "*"
+certifi = ">=2023.7.22"
+pygments = ">=2.15.0"
+requests = ">=2.31.0"
 
 [dev-packages]
 pre-commit = "*"
@@ -18,7 +21,9 @@ autodocsumm = "*"
 recommonmark = "*"
 sphinx-rtd-theme = "*"
 setuptools-scm = "*"
-certifi = ">=2022.12.7"  # responding to dependabot alert, affects only docs
+certifi = ">=2023.7.22"  # responding to dependabot alert, affects only docs
+Pygments = ">=2.15.0"   # responding to dependabot alert, affects only docs
+requests = ">=2.31.0"   # responding to dependabot alert, affects only docs
 
 [requires]
 python_version = "3.8"
