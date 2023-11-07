@@ -91,10 +91,22 @@ class Event(ABC):
         """
         return self.__class__.__name__
 
-    def _check_event_is_valid(self):
-        objects_exist = np.all(
+    def req_objects_exist(self):
+        """Check if all required objects still exist in the world.
+
+        Useful to check if the event is outdated.
+
+        Returns
+        -------
+        bool
+            True if all required objects still exist, False otherwise.
+        """
+        return np.all(
             [(req_object in req_object.world) for req_object in self.required_objects]
         )
+
+    def _check_event_is_valid(self):
+        objects_exist = self.req_objects_exist()
         if self.ignore_blocked:
             objects_available = True
         else:
@@ -770,8 +782,14 @@ class EventQueue(object):
         self.queue = []
         self.current_time = 0
         self._stats = defaultdict(
-            lambda: {"scheduled": 0, "resolved": 0, "resolved_successfully": 0}
+            lambda: {
+                "scheduled": 0,
+                "resolved": 0,
+                "resolved_successfully": 0,
+                "removed": 0,
+            }
         )
+        self._recurring_filters = []
 
     def __str__(self):
         return "EventQueue: " + str(self.queue)
@@ -864,6 +882,12 @@ class EventQueue(object):
             passed to the protocol.
 
         """
+        for recurring_filter in self._recurring_filters:
+            recurring_filter["counter"] += 1
+            if recurring_filter["counter"] > recurring_filter["filter_interval"]:
+                self.remove_by_condition(condition=recurring_filter["condition"])
+                recurring_filter["counter"] = 0
+
         event = self.queue[0]
         self.current_time = event.time
         return_message = event.resolve()
@@ -939,5 +963,55 @@ class EventQueue(object):
                 f"{count_dict['scheduled']} scheduled",
                 f"{count_dict['resolved']} resolved",
                 f"{count_dict['resolved_successfully']} resolved successfully",
+                f"{count_dict['removed']} removed",
             ]
             print("\n    ".join(string_parts))
+
+    def remove_by_condition(self, condition):
+        """Remove events from event queue if a condition is met.
+
+        Removing means they will not be resolved and very importantly,
+        their callbacks will not be triggered.
+
+        Parameters
+        ----------
+        condition : callable
+            This function will be called with the event as argument
+            for every event in the queue. If it returns something Truthy,
+            the event will be removed.
+
+        Returns
+        -------
+        list[Event]
+            All removed events.
+        """
+        events_to_remove = [event for event in self.queue if condition(event)]
+        for event in events_to_remove:
+            self.queue.remove(event)
+            self._stats[event.type]["removed"] += 1
+
+        return events_to_remove
+
+    def add_recurring_filter(self, condition, filter_interval):
+        """Add a condition to remove invalid events in a regular interval.
+
+        The `remove_by_condition` method will be called with this condition
+        after `filter_interval` events have been resolved using the `resolve_next_event`
+        method.
+
+        Parameters
+        ----------
+        condition : callable
+            This function will be called with an event as argument.
+            Should return True if the event should be removed from the queue.
+        filter_interval : int
+            The condition will be checked after `filter_interval` events have been resolved.
+
+        Returns
+        -------
+        None
+
+        """
+        self._recurring_filters.append(
+            {"condition": condition, "filter_interval": filter_interval, "counter": 0}
+        )
