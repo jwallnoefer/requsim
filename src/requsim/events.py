@@ -38,11 +38,11 @@ class Event(ABC):
     event_queue : EventQueue
         The event is part of this event queue.
         (None until added to an event queue.)
-    type
     time
     required_objects
     priority
     ignore_blocked
+    callback_functions
 
     """
 
@@ -563,6 +563,7 @@ class EntanglementPurificationEvent(Event):
     """Perform a step of an entanglement purification protocol.
 
     Additional information in return dict of resolve method:
+
     "output_pair" : Pair
         The output pair of the entanglement purification step.
     "is_successful" : bool
