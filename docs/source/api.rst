@@ -2,9 +2,6 @@ API-Reference
 ===============
 
 .. automodule:: requsim
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Main modules
 ------------

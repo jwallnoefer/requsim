@@ -28,6 +28,12 @@ class NoiseChannel(object):
         self.n_qubits = n_qubits
         self._channel_func = channel_function
 
+    def __repr__(self):
+        return (
+            self.__class__.__name__
+            + f"(n_qubits={self.n_qubits}, channel_function={self._channel_func})"
+        )
+
     def __call__(self, rho, *args, **kwargs):
         return self._channel_func(rho, *args, **kwargs)
 

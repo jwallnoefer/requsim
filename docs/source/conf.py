@@ -70,4 +70,8 @@ napoleon_use_rtype = False
 autodoc_member_order = "bysource"
 autodoc_default_options = {
     "autosummary": True,
+    "members": True,
+    "undoc-members": True,
+    "exclude-members": "_abc_impl",
+    "show-inheritance": True,
 }

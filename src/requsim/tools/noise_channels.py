@@ -81,7 +81,11 @@ def _w_noise_function(rho, alpha):
     return alpha * rho + (1 - alpha) * mat.I(2) / 2 * np.trace(rho)
 
 
+#: Single-qubit Pauli-X noise channel. Takes error probability `epsilon` as additional argument.
 x_noise_channel = NoiseChannel(n_qubits=1, channel_function=_x_noise_function)
+#: Single-qubit Pauli-Y noise channel. Takes error probability `epsilon` as additional argument.
 y_noise_channel = NoiseChannel(n_qubits=1, channel_function=_y_noise_function)
+#: Single-qubit Pauli-Z noise channel. Takes error probability `epsilon` as additional argument.
 z_noise_channel = NoiseChannel(n_qubits=1, channel_function=_z_noise_function)
+#: Single-qubit white noise (=fully depolarizing) channel. Takes error parameter `alpha` as additional argument.
 w_noise_channel = NoiseChannel(n_qubits=1, channel_function=_w_noise_function)
