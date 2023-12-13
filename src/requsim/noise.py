@@ -16,16 +16,13 @@ class NoiseChannel(object):
     n_qubits : int
         This noise channel acts on `n_qubits` input qubits.
     channel_function : callable
-        The function describing the channel.
-
-    Attributes
-    ----------
-    n_qubits
+        The function describing the channel, which takes a `n_qubit`-state
+        as input and returns a state as output.
 
     """
 
     def __init__(self, n_qubits, channel_function):
-        self.n_qubits = n_qubits
+        self._n_qubits = n_qubits
         self._channel_func = channel_function
 
     def __repr__(self):
@@ -35,7 +32,32 @@ class NoiseChannel(object):
         )
 
     def __call__(self, rho, *args, **kwargs):
+        r"""Calls the underlying `channel_function` directly.
+
+        This can be useful when defining a NoiseChannel in terms
+        of another NoiseChannel or as composition of NoiseChannels.
+
+        Parameters
+        ----------
+        rho : np.ndarray
+            A `n_qubit` density matrix with shape (2**n_qubit, 2**n_qubit).
+            The channel is applied to this input state.
+        \*args : any
+            args are passed through to `channel_function`
+        \*\*kwargs : any
+            kwargs are passed through to `channel_function`
+
+        Returns
+        -------
+        np.ndarray
+            The output state after the channel.
+        """
         return self._channel_func(rho, *args, **kwargs)
+
+    @property
+    def n_qubits(self):
+        """Return `n_qubits`."""
+        return self._n_qubits
 
     def apply_to(self, rho, qubit_indices, *args, **kwargs):
         # additional functionality e.g. for different ways to define channels may be added here
@@ -123,7 +145,7 @@ class NoiseModel(object):
 
 
 def freeze_noise_channel(noise_channel, *args, **kwargs):
-    r"""DEPRECATED. Use NoiseChannel.freeze(\*args, \*\*kwargs) instead.
+    r"""DEPRECATED, instead use NoiseChannel.freeze(\*args, \*\*kwargs).
 
     Deprecated because not compatible with extensions of different noise models.
 
