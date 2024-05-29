@@ -125,9 +125,19 @@ class TestEvents(unittest.TestCase):
         # implicitly required objects should know of the event
         for obj in event.required_objects:
             self.assertIn(event, obj.required_by_events)
+        mock_event_type_callback = MagicMock()
+        self.world.event_queue.add_event_type_callback(
+            event_class=EventClass, callback_func=mock_event_type_callback
+        )
+        mock_superclass_callback = MagicMock()
+        self.world.event_queue.add_event_type_callback(
+            event_class=Event, callback_func=mock_superclass_callback
+        )
         self.world.event_queue.add_event(event)
         mock_init_callback.assert_not_called()
         mock_added_callback.assert_not_called()
+        mock_event_type_callback.assert_not_called()
+        mock_superclass_callback.assert_not_called()
         return_value = self.world.event_queue.resolve_next_event()
         if "required_objects" in kwargs:
             for obj in kwargs["required_objects"]:
@@ -137,6 +147,8 @@ class TestEvents(unittest.TestCase):
             self.assertNotIn(event, obj.required_by_events)
         mock_init_callback.assert_called_once()
         mock_added_callback.assert_called_once()
+        mock_event_type_callback.assert_called_once()
+        mock_superclass_callback.assert_called_once()
         self.assertTrue(self._check_event_return_is_valid(return_value))
 
     def test_dummy_event(self):  # basically just tests the tracking of required objects

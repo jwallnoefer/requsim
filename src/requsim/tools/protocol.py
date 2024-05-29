@@ -1,5 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
+from warnings import warn
+
 import numpy as np
 import pandas as pd
 from ..events import SourceEvent
@@ -11,8 +13,10 @@ class Protocol(ABC):
 
     Parameters
     ----------
-    world : World
-        The world in which the protocol will be performed.
+    world : World or None
+        The use of this argument is deprecated (because a protocol should be defined and intializable without
+        specifying a scenario it is used in) and only remains here for backward compatibility. Setting the `world`
+        attribute as part of the `setup` method is the recommended way to do this now. Default: None
 
     Attributes
     ----------
@@ -24,14 +28,14 @@ class Protocol(ABC):
         self.world = world
 
     @abstractmethod
-    def setup(self, *args, **kwargs):
+    def setup(self, world, *args, **kwargs):
         """Setup function to be called after the world has been initialized.
 
         Should analyze the world to see if the protocol is applicable to the
         situation and possibly label stations/sources so they are easy
         to access in the check method of the protocol.
         """
-        pass
+        self.world = world
 
     @abstractmethod
     def check(self, message=None):
@@ -56,7 +60,16 @@ class TwoLinkProtocol(Protocol):
     But it is still abstract and misses the central check method.
     """
 
-    def __init__(self, world, communication_speed):
+    def __init__(self, world=None, communication_speed=None):
+        if world is not None or communication_speed is not None:
+            warn(
+                "Initializing Protocol with setup-dependent arguments (like world) is no longer recommended "
+                + "and may be deprecated in future versions. "
+                + "Protocols should be initializeable without tying it to a specific scenario. "
+                + "Use the setup method to pass scenario-dependent arguments instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
         self.time_list = []
         self.state_list = []
         self.communication_speed = communication_speed
@@ -66,17 +79,48 @@ class TwoLinkProtocol(Protocol):
     def data(self):
         return pd.DataFrame({"time": self.time_list, "state": self.state_list})
 
-    def setup(self):
+    def setup(self, world=None, communication_speed=None):
         """Identifies the stations and sources in the world.
 
         Should be run after the relevant WorldObjects have been added
         to the world.
+
+        Parameters
+        ----------
+        world : World
+            The World object representing the scenario for which this Protocol will be used.
+        communication_speed : scalar
+            The communication speed usd for calculating delays when sending qubits or
+            classical messages between stations.
+
 
         Returns
         -------
         None
 
         """
+        if world is None:
+            if self.world is None:
+                raise ValueError(
+                    "world is not specified. "
+                    + "Must be provided either as part of the initialization (deprecated) or "
+                    "the setup method (recommended)."
+                )
+            else:
+                pass
+        else:
+            self.world = world
+        if communication_speed is None:
+            if self.communication_speed is None:
+                raise ValueError(
+                    "communication_speed is not specified. "
+                    + "Must be provided either as part of the initialization (deprecated) or "
+                    + "the setup method (recommended)."
+                )
+            else:
+                pass
+        else:
+            self.communication_speed = communication_speed
         stations = self.world.world_objects["Station"]
         assert len(stations) == 3
         if isinstance(stations[0].position, int):

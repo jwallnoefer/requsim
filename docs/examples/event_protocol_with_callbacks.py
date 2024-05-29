@@ -153,8 +153,8 @@ def run(length, max_iter, params):
         time_distribution=time_distribution,
         state_generation=state_generation,
     )
-    protocol = CallbackProtocol(world=world, communication_speed=C)
-    protocol.setup()
+    protocol = CallbackProtocol()
+    protocol.setup(world=world, communication_speed=C)
     protocol.start()
 
     while len(protocol.time_list) < max_iter:

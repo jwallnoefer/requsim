@@ -554,7 +554,6 @@ class LocalProtocol(object):
 
 
 class CallbackProtocol(BaseManylinkProtocol):
-
     def _check_new_source_events(self, station):
         sources_to_check = self.sources_by_station[station]
         for source in sources_to_check:
@@ -577,7 +576,6 @@ class CallbackProtocol(BaseManylinkProtocol):
             for station in stations_to_check:
                 self._check_swapping(station)
 
-
     def on_swapping_event_callback(self, event_return_dict=None):
         if event_return_dict["resolve_successful"]:
             output_pair = event_return_dict["output_pair"]
@@ -589,7 +587,7 @@ class CallbackProtocol(BaseManylinkProtocol):
                 output_pair.destroy()
             station = event_return_dict["swapping_station"]
             self._check_new_source_events(station)
-        else: # recheck on failed swapping
+        else:  # recheck on failed swapping
             station = event_return_dict["event"].station
             self._check_swapping(station)
 

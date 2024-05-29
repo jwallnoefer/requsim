@@ -24,7 +24,7 @@ from protocols import (
     CustomManylinkProtocol,
     CompositeProtocol,
     LocalProtocol,
-    CallbackProtocol
+    CallbackProtocol,
 )
 
 C = 2e8  # speed of light in optical fiber
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         "ObserveOnly": ObserveOnlyManylinkProtocol(),
         "Custom": CustomManylinkProtocol(),
         "Local": CompositeProtocol(subprotocol=LocalProtocol()),
-        "Callback": CallbackProtocol()
+        "Callback": CallbackProtocol(),
     }
 
     num_parts = 16

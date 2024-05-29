@@ -73,7 +73,7 @@ class Event(ABC):
         }
         if callback_functions is None:
             callback_functions = []
-        self._callback_functions = callback_functions
+        self._callback_functions = list(callback_functions)
 
     @abstractmethod
     def __repr__(self):
@@ -792,6 +792,7 @@ class EventQueue(object):
             }
         )
         self._recurring_filters = []
+        self._event_type_callbacks = defaultdict(list)
 
     def __str__(self):
         return "EventQueue: " + str(self.queue)
@@ -872,6 +873,10 @@ class EventQueue(object):
         event.event_queue = self
         self._insert_event(event)
         self._stats[event.type]["scheduled"] += 1
+        for event_class, callbacks in self._event_type_callbacks.items():
+            if isinstance(event, event_class):
+                for callback_func in callbacks:
+                    event.add_callback(callback_func)
 
     def resolve_next_event(self):
         """Remove the next scheduled event from the queue and resolve it.
@@ -1017,3 +1022,38 @@ class EventQueue(object):
         self._recurring_filters.append(
             {"condition": condition, "filter_interval": filter_interval, "counter": 0}
         )
+
+    def add_event_type_callback(self, event_class, callback_func):
+        """Add a callback to all events of a certain type.
+
+        In terms of resolution order, the callback will be added
+        after the callbacks that are already present when it is added
+        the queue. For events that are already in the queue, the
+        callbacks will be added after the ones that are already present
+        when this method is called.
+
+        Parameters
+        ----------
+        event_class : subclass of Event
+            The callback will be added to all events that are instances of this class
+            (or a subclass).
+        callback_func : callables
+            This function will be added to the list of callbacks of the specified events.
+            This means it will be called with the return dictionary of the event's
+            resolve method.
+
+        Returns
+        -------
+        None
+
+        """
+        if not issubclass(event_class, Event):
+            raise ValueError(
+                f"{event_class} is not supported, because it is not a subclass of Event."
+            )
+        # add to existing
+        for event in self.queue:
+            if isinstance(event, event_class):
+                event.add_callback(callback_func)
+        # remember to add to newly scheduled events
+        self._event_type_callbacks[event_class].append(callback_func)
