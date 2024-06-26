@@ -81,7 +81,6 @@ def run_timed(run_dict):
 
 if __name__ == "__main__":
     args = docopt(__doc__)
-    print(args)
     if args["--plot"]:
         data_path = args["--data"]
         for case in cases:
@@ -103,7 +102,6 @@ if __name__ == "__main__":
             cases_to_run = [cases[case_index]]
         parallel_jobs = int(args["--parallel"])
         for case in cases_to_run:
-            print(case["name"])
             if parallel_jobs > 1:
                 pool = Pool(parallel_jobs)
                 output = pool.map(run_timed, reversed(case["parts"]), chunksize=1)
@@ -112,7 +110,6 @@ if __name__ == "__main__":
                 output = [run_timed(part) for part in case["parts"]]
             output = np.array(output) / base_max_iter
             output_dir = args["--output"]
-            print(output_dir, type(output_dir))
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
             output_path = os.path.join(output_dir, case["name"] + ".txt")
