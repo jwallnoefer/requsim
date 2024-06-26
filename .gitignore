@@ -1,3 +1,8 @@
+# do not commit output of benchmarking
+benchmarking/**/results
+benchmarking/**/*.png
+benchmarking/**/*.pdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

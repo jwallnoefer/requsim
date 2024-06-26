@@ -24,6 +24,8 @@ requests = ">=2.32.0"   # responding to dependabot alert, affects only docs
 idna = ">=3.7"   # responding to dependabot alert, affects only docs
 urllib3 = ">=2.0.7"   # responding to dependabot alert, affects only docs
 Jinja2 = ">=3.1.4"   # responding to dependabot alert, affects only docs
+matplotlib = "*"
+docopt = "*"
 
 [requires]
 python_version = "3.8"
