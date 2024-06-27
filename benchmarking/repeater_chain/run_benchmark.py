@@ -42,7 +42,7 @@ PROTOCOLS = {
 
 base_num_parts = 128
 base_num_links = np.linspace(0, 1024, num=base_num_parts + 1, dtype=int)[1:]
-base_max_iter = 5e4
+base_max_iter = 5e3
 base_total_length = 50000  # meters
 
 base_params = {"T_DP": 10, "F_INIT": 0.999}
