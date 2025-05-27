@@ -10,7 +10,7 @@ an official release.
 ## Development Environment
 
 This project uses `pipenv` for setting up a stable development environment.
-The following assumes Python 3.8 and `pipenv` are installed on your system.
+The following assumes Python 3.10 and `pipenv` are installed on your system.
 You can set up the development environment like this:
 
 ```
