@@ -89,10 +89,12 @@ if __name__ == "__main__":
             except FileNotFoundError:
                 continue
             x = case["index"]
-            plt.scatter(x, y, label=case["name"])
+            plt.scatter(x, y, s=5, label=case["name"])
         plt.grid()
         plt.legend()
-        plt.savefig(args["--name"])
+        plt.ylabel("Process time per distributed pair [s]")
+        plt.xlabel("Number of repeater links")
+        plt.savefig(args["--name"], bbox_inches="tight")
     else:
         selected_case = args["--case"]
         if selected_case is None:
