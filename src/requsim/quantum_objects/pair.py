@@ -1,7 +1,7 @@
-from . import WorldObject
+from . import State
 
 
-class Pair(WorldObject):
+class Pair(State):
     """A Pair of two qubits with its associated quantum state.
 
     Parameters
@@ -29,53 +29,55 @@ class Pair(WorldObject):
         initial_state,
         label=None,
     ):
-        # maybe add a check that qubits are always in the same order?
-        self._qubits = tuple(qubits)
-        self.state = initial_state
-        self.qubit1.update_info({"pair": self})
-        self.qubit1.higher_order_object = self
-        self.qubit1.add_destroy_callback(self._on_qubit_destroy)
-        self.qubit2.update_info({"pair": self})
-        self.qubit2.higher_order_object = self
-        self.qubit2.add_destroy_callback(self._on_qubit_destroy)
-        # add self as noise handler for its qubits
-        self.qubit1.add_noise_handler(self._qubit1_noise_handler)
-        self.qubit2.add_noise_handler(self._qubit2_noise_handler)
-        super(Pair, self).__init__(world=world, label=label)
-
-    def __repr__(self):
-        return (
-            f'<{self.__class__.__module__}.{self.__class__.__name__} "{self.label}" '
-            + "qubits=["
-            + ", ".join([x.label for x in self.qubits])
-            + "]"
-            + f" with state at last update {self.state}"
-            + ">"
+        # # maybe add a check that qubits are always in the same order?
+        # self._qubits = tuple(qubits)
+        # self.state = initial_state
+        # self.qubit1.update_info({"pair": self})
+        # self.qubit1.higher_order_object = self
+        # self.qubit1.add_destroy_callback(self._on_qubit_destroy)
+        # self.qubit2.update_info({"pair": self})
+        # self.qubit2.higher_order_object = self
+        # self.qubit2.add_destroy_callback(self._on_qubit_destroy)
+        # # add self as noise handler for its qubits
+        # self.qubit1.add_noise_handler(self._qubit1_noise_handler)
+        # self.qubit2.add_noise_handler(self._qubit2_noise_handler)
+        super(Pair, self).__init__(
+            world=world, qubits=qubits, initial_state=initial_state, label=label
         )
 
-    def __str__(self):
-        return (
-            f"{self.label} with qubits "
-            + ", ".join([x.label for x in self.qubits])
-            + " between stations "
-            + ", ".join(
-                [
-                    x._info["station"].label
-                    if x._info["station"]
-                    else str(x._info["station"])
-                    for x in self.qubits
-                ]
-            )
-            + "."
-        )
+    # def __repr__(self):
+    #     return (
+    #         f'<{self.__class__.__module__}.{self.__class__.__name__} "{self.label}" '
+    #         + "qubits=["
+    #         + ", ".join([x.label for x in self.qubits])
+    #         + "]"
+    #         + f" with state at last update {self.state}"
+    #         + ">"
+    #     )
+    #
+    # def __str__(self):
+    #     return (
+    #         f"{self.label} with qubits "
+    #         + ", ".join([x.label for x in self.qubits])
+    #         + " between stations "
+    #         + ", ".join(
+    #             [
+    #                 x._info["station"].label
+    #                 if x._info["station"]
+    #                 else str(x._info["station"])
+    #                 for x in self.qubits
+    #             ]
+    #         )
+    #         + "."
+    #     )
 
     @property
     def type(self):
         return "Pair"
 
-    @property
-    def qubits(self):
-        return tuple(self._qubits)
+    # @property
+    # def qubits(self):
+    #     return tuple(self._qubits)
 
     # not sure we actually need to be able to change qubits
     @property
@@ -102,23 +104,23 @@ class Pair(WorldObject):
         """
         return self._qubits[1]
 
-    def _qubit1_noise_handler(self, noise_channel, *args, **kwargs):
-        self.state = noise_channel.apply_to(
-            rho=self.state, qubit_indices=[0], *args, **kwargs
-        )
-        handling_successful = True
-        return handling_successful
-
-    def _qubit2_noise_handler(self, noise_channel, *args, **kwargs):
-        self.state = noise_channel.apply_to(
-            rho=self.state, qubit_indices=[1], *args, **kwargs
-        )
-        handling_successful = True
-        return handling_successful
-
-    def _on_qubit_destroy(self, qubit):
-        if qubit in self.qubits:
-            self.destroy()
+    # def _qubit1_noise_handler(self, noise_channel, *args, **kwargs):
+    #     self.state = noise_channel.apply_to(
+    #         rho=self.state, qubit_indices=[0], *args, **kwargs
+    #     )
+    #     handling_successful = True
+    #     return handling_successful
+    #
+    # def _qubit2_noise_handler(self, noise_channel, *args, **kwargs):
+    #     self.state = noise_channel.apply_to(
+    #         rho=self.state, qubit_indices=[1], *args, **kwargs
+    #     )
+    #     handling_successful = True
+    #     return handling_successful
+    #
+    # def _on_qubit_destroy(self, qubit):
+    #     if qubit in self.qubits:
+    #         self.destroy()
 
     def is_between_stations(self, station1, station2):
         """Check whether qubits are at specified stations.
@@ -138,14 +140,14 @@ class Pair(WorldObject):
             self.qubit1 in station2.qubits and self.qubit2 in station1.qubits
         )
 
-    def _on_update_time(self):
-        self.qubit1.update_time()
-        self.qubit2.update_time()
-
-    def destroy(self):
-        # remove self as noise handler for its qubits
-        if self.qubit1 in self.world:
-            self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
-        if self.qubit2 in self.world:
-            self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
-        super(Pair, self).destroy()
+    # def _on_update_time(self):
+    #     self.qubit1.update_time()
+    #     self.qubit2.update_time()
+    #
+    # def destroy(self):
+    #     # remove self as noise handler for its qubits
+    #     if self.qubit1 in self.world:
+    #         self.qubit1.remove_noise_handler(self._qubit1_noise_handler)
+    #     if self.qubit2 in self.world:
+    #         self.qubit2.remove_noise_handler(self._qubit2_noise_handler)
+    #     super(Pair, self).destroy()
